@@ -1,7 +1,7 @@
 import type { Database } from '../types';
 import { resolveCompanies, resolveSchools } from '../derive';
 import { wordPrefixMatch } from '../match';
-import { normalizeKey } from '../normalize';
+import { companyKey, normalizeKey } from '../normalize';
 import { emptyFilters, isEmptyFilters, type Filters } from './filters';
 
 // ---------------------------------------------------------------------------
@@ -323,8 +323,12 @@ function applyPredicate(
       return;
 
     case 'ambiguous-in': {
-      // "works in <X>": X might be an employer, a city, or a field.
-      const companies = resolveCompanies(db, value);
+      // "works in <X>": X is most often a field ("works in AI"), sometimes a
+      // city, and only occasionally an employer. So require an *exact* company
+      // name here rather than the fuzzy resolution used for "works at X" —
+      // otherwise a domain gets read as whichever company it resembles.
+      const exactKey = companyKey(value);
+      const companies = db.companies.filter((c) => c.nameKey === exactKey);
       if (companies.length > 0) {
         filters.currentCompanyIds.push(...companies.map((c) => c.id));
         addInterp(interpretation, 'Currently at', companies.map((c) => c.name));

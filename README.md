@@ -34,9 +34,18 @@ names, loaded through the same pipeline as a genuine import.
 
 ### Questions the Ask page understands
 
-Rule-based and fully local — no model calls. It maps phrasings onto the same
-filters the People page uses and always displays its interpretation, so a
-misreading is visible rather than mysterious.
+Questions map onto the same filters the People page uses, and the reading is
+always displayed, so a misinterpretation is visible rather than mysterious.
+
+Two engines. Without configuration it uses a local rule-based parser and makes
+no network calls at all. With Azure OpenAI configured (see below) it uses
+gpt-4o for the language, which handles far looser phrasing — *"find me people
+who could introduce me to someone at Nvidia"*, *"senior folks in data at
+Reliance"*, *"anyone from my old college?"*. The badge on each answer says which
+engine produced it, and a **local parser only** checkbox forces the offline
+path.
+
+Recognized by both:
 
 - `works at` / `is at` → current employer
 - `previously worked at` / `used to work at` / `ex-` → past employer
@@ -47,7 +56,32 @@ misreading is visible rather than mysterious.
 - combine with `and`: *"Who went to IIT and works in AI?"*
 
 Acronyms expand against your data, so **IIT** matches every Indian Institute of
-Technology and **BITS** finds BITS Pilani.
+Technology, **TCS** finds Tata Consultancy Services, and spacing variants like
+**DY Patil** reach "D Y Patil International University".
+
+## Optional: Azure OpenAI
+
+Copy `.env.example` to `.env.local` and fill in:
+
+```
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
+AZURE_OPENAI_API_KEY=...
+AZURE_OPENAI_DEPLOYMENT=gpt-4o        # your deployment name
+AZURE_OPENAI_API_VERSION=2024-10-21
+```
+
+**What is sent.** Only the question you type, plus your *own* profile's schools
+and employers so possessives like "my old college" resolve. No connection of
+yours — no names, employers, emails or anything else about them — is ever put in
+a prompt. The model's job is purely linguistic: it turns a sentence into a
+structured intent naming entities in plain text, and resolving those names
+against the actual graph happens locally with the same deterministic code the
+offline parser uses. So the model improves language coverage without becoming a
+source of truth about your data.
+
+**It is never a dependency.** If the key is missing, wrong, rate-limited or the
+request times out, Ask falls back to the local parser, still answers, and shows
+what went wrong. Every other page is unaffected.
 
 ## Importing
 
@@ -114,7 +148,8 @@ src/lib/
   graph.ts          graph projection
   ingest/           csv reader, entity merge, LinkedIn + enriched importers
   query/            filters, facets, question parser, aggregations
-src/app/api/        dataset, import, sample, reset, notes, relationship
+  llm/              optional Azure OpenAI client and question translator
+src/app/api/        dataset, import, sample, reset, notes, relationship, ask
 ```
 
 The client fetches the whole database once and does all filtering, graphing and

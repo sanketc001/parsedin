@@ -14,12 +14,22 @@ export function escapeRegExp(text: string): string {
 }
 
 /**
- * True when every token of `needle` starts a word in `haystack`.
- * Both arguments must already be normalized keys.
+ * Shortest token length allowed to match as a prefix. Below this, a token must
+ * equal a whole word: "ai" must not match "airtel", nor "it" "italy", but
+ * "mckin" should still reach "mckinsey".
+ */
+const MIN_PREFIX_LENGTH = 4;
+
+/**
+ * True when every token of `needle` matches a word in `haystack` — as a prefix
+ * for tokens of at least MIN_PREFIX_LENGTH characters, and exactly for shorter
+ * ones. Both arguments must already be normalized keys.
  *
  *   wordPrefixMatch('mckinsey company', 'mckinsey') -> true
- *   wordPrefixMatch('bain company', 'ai')           -> false
  *   wordPrefixMatch('machine learning', 'learn')    -> true
+ *   wordPrefixMatch('bain company', 'ai')           -> false
+ *   wordPrefixMatch('airtel', 'ai')                 -> false
+ *   wordPrefixMatch('nexthop ai', 'ai')             -> true
  */
 export function wordPrefixMatch(haystack: string, needle: string): boolean {
   if (!needle) return true;
@@ -27,19 +37,25 @@ export function wordPrefixMatch(haystack: string, needle: string): boolean {
   const tokens = needle.split(' ').filter(Boolean);
   if (tokens.length === 0) return true;
   const words = haystack.split(' ').filter(Boolean);
-  return tokens.every((token) => words.some((word) => word.startsWith(token)));
+  return tokens.every((token) =>
+    token.length < MIN_PREFIX_LENGTH
+      ? words.some((word) => word === token)
+      : words.some((word) => word.startsWith(token)),
+  );
 }
 
 /**
  * Match a search term against free-form text, anchored to word starts.
- * Text should be lowercased already; terms with no alphanumerics fall back to
- * a plain substring test so queries like "c++" still work.
+ * Long terms match as prefixes so "goog" finds Google; short ones must be
+ * whole words, so "AI" finds "Applied AI" but not "airtel".
+ * Terms with no alphanumerics fall back to substring so "c++" still works.
  */
 export function termMatches(text: string, term: string): boolean {
   const t = term.toLowerCase().trim();
   if (!t) return true;
   if (!/[a-z0-9]/.test(t)) return text.includes(t);
-  return new RegExp(`\\b${escapeRegExp(t)}`).test(text);
+  const anchor = t.length < MIN_PREFIX_LENGTH ? `\\b${escapeRegExp(t)}\\b` : `\\b${escapeRegExp(t)}`;
+  return new RegExp(anchor).test(text);
 }
 
 /**
@@ -88,6 +104,15 @@ export function resolveByName<T>(
   if (looksLikeAcronym(key)) {
     const acronym = entities.filter((e) => acronymOf(keyOf(e)).startsWith(key));
     if (acronym.length > 0) return acronym;
+  }
+
+  // Spacing variants: "DY Patil" vs "D Y Patil", "SBI" vs "S B I". Comparing
+  // with all spaces removed catches these. Guarded by length so short strings
+  // cannot match half the database.
+  const compactKey = key.replace(/ /g, '');
+  if (compactKey.length >= MIN_PREFIX_LENGTH) {
+    const compact = entities.filter((e) => keyOf(e).replace(/ /g, '').includes(compactKey));
+    if (compact.length > 0) return compact;
   }
 
   return [];

@@ -1,24 +1,64 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useData } from '@/components/DataProvider';
 import { Empty, PageHeader, PersonLine, Section } from '@/components/ui';
 import { filterPeople, sortPeople } from '@/lib/query/filters';
-import { EXAMPLE_QUESTIONS, parseQuestion } from '@/lib/query/nl';
+import { EXAMPLE_QUESTIONS, type ParsedQuery } from '@/lib/query/nl';
 import { aggregationTitle, runAggregation } from '@/lib/query/aggregate';
 
 const RESULT_LIMIT = 60;
 
+interface AskResponse {
+  engine: 'llm' | 'rules';
+  reading?: string;
+  llmError?: string;
+  llmAvailable?: boolean;
+  parsed: ParsedQuery;
+}
+
 export default function AskPage() {
   const { db, idx, loading } = useData();
   const [question, setQuestion] = useState('');
-  const [submitted, setSubmitted] = useState('');
+  const [localOnly, setLocalOnly] = useState(false);
+  const [llmAvailable, setLlmAvailable] = useState<boolean | null>(null);
+  const [result, setResult] = useState<AskResponse | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const parsed = useMemo(
-    () => (submitted.trim() ? parseQuestion(submitted, db) : null),
-    [submitted, db],
-  );
+  // Tell the user up front whether the model is wired up.
+  useEffect(() => {
+    fetch('/api/ask')
+      .then((r) => r.json())
+      .then((j) => setLlmAvailable(!!j.llmAvailable))
+      .catch(() => setLlmAvailable(false));
+  }, []);
+
+  const ask = async (text: string) => {
+    const q = text.trim();
+    if (!q) return;
+    setQuestion(text);
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q, localOnly }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? `request failed (${res.status})`);
+      setResult(json as AskResponse);
+    } catch (err) {
+      setError(String(err));
+      setResult(null);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const parsed = result?.parsed ?? null;
 
   const people = useMemo(() => {
     if (!parsed) return [];
@@ -32,23 +72,37 @@ export default function AskPage() {
     return runAggregation(people.length > 0 ? people : db.people, parsed.aggregation, idx);
   }, [parsed, people, db.people, idx]);
 
-  const ask = (text: string) => {
-    setQuestion(text);
-    setSubmitted(text);
-  };
-
   return (
     <>
       <PageHeader
         title="Ask"
-        subtitle="Plain-English questions, answered locally against your graph"
+        subtitle="Plain-English questions, answered against your graph"
+        actions={
+          <span className="flex items-center gap-3 text-xs">
+            {llmAvailable === null ? null : llmAvailable ? (
+              <label className="flex items-center gap-1.5 text-slate-400">
+                <input
+                  type="checkbox"
+                  className="accent-accent"
+                  checked={localOnly}
+                  onChange={(e) => setLocalOnly(e.target.checked)}
+                />
+                local parser only
+              </label>
+            ) : (
+              <span className="text-slate-500" title="Set AZURE_OPENAI_* in .env.local">
+                local parser (no model configured)
+              </span>
+            )}
+          </span>
+        }
       />
 
       <div className="space-y-4 p-6">
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            setSubmitted(question);
+            void ask(question);
           }}
           className="flex gap-2"
         >
@@ -58,8 +112,8 @@ export default function AskPage() {
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
           />
-          <button type="submit" className="btn btn-primary px-4" disabled={loading}>
-            Ask
+          <button type="submit" className="btn btn-primary px-4" disabled={loading || busy}>
+            {busy ? 'Thinking…' : 'Ask'}
           </button>
         </form>
 
@@ -68,18 +122,47 @@ export default function AskPage() {
             <button
               key={example}
               type="button"
-              onClick={() => ask(example)}
-              className="chip hover:border-accent/50 hover:text-accent-soft"
+              onClick={() => void ask(example)}
+              disabled={busy}
+              className="chip hover:border-accent/50 hover:text-accent-soft disabled:opacity-50"
             >
               {example}
             </button>
           ))}
         </div>
 
+        {error ? (
+          <div className="rounded border border-red-900/60 bg-red-950/30 p-3 text-sm text-red-300">
+            {error}
+          </div>
+        ) : null}
+
         {parsed ? (
           <>
-            <Section title="How this was read">
+            <Section
+              title="How this was read"
+              aside={
+                <span
+                  className={`chip ${
+                    result!.engine === 'llm'
+                      ? 'border-fuchsia-800/60 bg-fuchsia-950/40 text-fuchsia-300'
+                      : ''
+                  }`}
+                  title={
+                    result!.engine === 'llm'
+                      ? 'Azure OpenAI translated the question; only the question text was sent'
+                      : 'Parsed locally with rules — nothing left this machine'
+                  }
+                >
+                  {result!.engine === 'llm' ? 'gpt-4o' : 'local rules'}
+                </span>
+              }
+            >
               <div className="space-y-2">
+                {result?.reading ? (
+                  <p className="text-sm text-slate-300">{result.reading}</p>
+                ) : null}
+
                 {parsed.interpretation.length === 0 && !parsed.aggregation ? (
                   <p className="text-sm text-slate-400">
                     Nothing recognizable — showing no constraints.
@@ -102,10 +185,9 @@ export default function AskPage() {
                   </div>
                 )}
 
-                {parsed.fellBackToSearch ? (
-                  <p className="text-xs text-slate-500">
-                    No specific pattern matched, so this ran as a full-text search across every
-                    profile field.
+                {result?.llmError ? (
+                  <p className="text-xs text-amber-500/90">
+                    Model unavailable, answered with the local parser instead: {result.llmError}
                   </p>
                 ) : null}
 
@@ -165,7 +247,7 @@ export default function AskPage() {
               title="People"
               count={people.length}
               aside={
-                people.length > 0 ? (
+                people.length > 0 && parsed.filters.q ? (
                   <Link
                     href={`/people?q=${encodeURIComponent(parsed.filters.q)}`}
                     className="text-xs text-slate-500 hover:text-slate-300"
@@ -201,19 +283,27 @@ export default function AskPage() {
           </>
         ) : (
           <div className="card p-6 text-sm text-slate-400">
-            <p className="font-medium text-slate-200">What this understands</p>
-            <ul className="mt-2 list-inside list-disc space-y-1">
+            <p className="font-medium text-slate-200">How this works</p>
+            <p className="mt-2">
+              Questions are translated into the same filters the People page uses, and the reading
+              is always shown so a misinterpretation is visible rather than mysterious.
+            </p>
+            <p className="mt-2">
+              {llmAvailable
+                ? 'Azure OpenAI handles the language; only your question text is sent — never any part of your network. Entity names are then resolved locally against your own data.'
+                : 'A local rule-based parser handles this today. Add AZURE_OPENAI_* values to .env.local for broader phrasing support; even then, only the question text is sent — never your network.'}
+            </p>
+            <p className="mt-3 font-medium text-slate-300">Understood either way</p>
+            <ul className="mt-1 list-inside list-disc space-y-1">
               <li>
                 <span className="text-slate-300">works at / is at</span> — current employer
               </li>
               <li>
-                <span className="text-slate-300">previously worked at / used to work at / ex-</span>{' '}
-                — past employer
+                <span className="text-slate-300">previously worked at / ex-</span> — past employer
               </li>
               <li>
-                <span className="text-slate-300">went to / studied at / graduated from</span> —
-                school (matches every school containing the phrase, so &quot;IIT&quot; finds all of
-                them)
+                <span className="text-slate-300">went to / studied at</span> — school (acronyms
+                expand against your data, so &quot;IIT&quot; finds every IIT)
               </li>
               <li>
                 <span className="text-slate-300">lives in / based in</span> — location
@@ -222,18 +312,10 @@ export default function AskPage() {
                 <span className="text-slate-300">knows / skilled in</span> — skills
               </li>
               <li>
-                <span className="text-slate-300">which companies / schools / cities …</span> — ranked
-                counts
-              </li>
-              <li>
-                Combine with <span className="text-slate-300">and</span>: &quot;who went to IIT and
-                works in AI&quot;
+                <span className="text-slate-300">which companies / schools / cities …</span> —
+                ranked counts
               </li>
             </ul>
-            <p className="mt-3 text-xs text-slate-500">
-              Parsing is rule-based and runs entirely in your browser — no model calls, and the
-              reading is always shown so a misinterpretation is visible.
-            </p>
           </div>
         )}
       </div>

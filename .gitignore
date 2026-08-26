@@ -5,7 +5,10 @@ out/
 .DS_Store
 next-env.d.ts
 *.tsbuildinfo
-.env*
+.env
+.env.local
+.env.*.local
+!.env.example
 
 # Personal data — never commit any of this.
 # data/ holds the imported graph; Linkedin/ holds raw LinkedIn exports, which
