@@ -101,6 +101,13 @@ export interface PersonSeed {
   summary?: string | null;
   connectedOn?: string | null;
   connectionDegree?: number | null;
+  /**
+   * Degree to apply only when none is already known. For sources that imply a
+   * weak relationship without proving it — an invitation says "at least 2nd",
+   * but the same person may already be a confirmed 1st-degree connection, and
+   * which file is read first must not decide the answer.
+   */
+  connectionDegreeIfUnknown?: number | null;
 }
 
 function displayName(seed: PersonSeed): string | null {
@@ -200,6 +207,11 @@ export function applyPersonSeed(ctx: Ctx, person: Person, seed: PersonSeed): voi
   setField(person, 'connectedOn', clean(seed.connectedOn), ctx);
   if (typeof seed.connectionDegree === 'number') {
     setField(person, 'connectionDegree', seed.connectionDegree, ctx);
+  } else if (
+    typeof seed.connectionDegreeIfUnknown === 'number' &&
+    person.connectionDegree === null
+  ) {
+    setField(person, 'connectionDegree', seed.connectionDegreeIfUnknown, ctx);
   }
 
   const url = clean(seed.linkedinUrl);

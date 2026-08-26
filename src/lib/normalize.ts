@@ -35,12 +35,26 @@ const COMPANY_NOISE = [
 ];
 
 /**
- * Company identity key. Drops legal suffixes and filler words so
- * "Google", "Google Inc.", and "Google LLC" all collapse together.
+ * Strip trailing parenthetical asides before normalizing. Organizations are
+ * routinely written with their own acronym appended — "Jio Platforms Limited
+ * (JPL)" is the same employer as "Jio Platforms", and without this they
+ * normalize to different keys and split into two entities.
+ */
+function dropParentheticals(value: unknown): string {
+  const s = clean(value);
+  if (!s) return '';
+  const stripped = s.replace(/\s*[([{][^)\]}]*[)\]}]/g, ' ').trim();
+  // Never strip everything away: "(Ex-Google)" as an entire name keeps its text.
+  return stripped || s;
+}
+
+/**
+ * Company identity key. Drops parentheticals, legal suffixes and filler words
+ * so "Google", "Google Inc.", and "Google LLC" all collapse together.
  * Falls back to the plain key when stripping would leave nothing.
  */
 export function companyKey(value: unknown): string {
-  const base = normalizeKey(value);
+  const base = normalizeKey(dropParentheticals(value));
   if (!base) return '';
   const parts = base.split(' ').filter((p) => !COMPANY_NOISE.includes(p));
   const stripped = parts.join(' ').trim();
@@ -50,7 +64,7 @@ export function companyKey(value: unknown): string {
 const SCHOOL_NOISE = ['the', 'of', 'at', 'and'];
 
 export function schoolKey(value: unknown): string {
-  const base = normalizeKey(value);
+  const base = normalizeKey(dropParentheticals(value));
   if (!base) return '';
   const parts = base.split(' ').filter((p) => !SCHOOL_NOISE.includes(p));
   const stripped = parts.join(' ').trim();

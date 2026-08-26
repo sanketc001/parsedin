@@ -221,18 +221,34 @@ const handleConnections: Handler = (text, ctx) => {
 };
 
 /**
- * Pending and past invitations. Useful signal but not a connection — imported
- * only as a person stub when we have never seen the name before.
+ * Pending and past invitations — people you reached out to, or who reached out
+ * to you, without necessarily connecting. Recorded as 2nd degree.
+ *
+ * These rows carry the counterparty's profile URL, which matters: it lets an
+ * invitation merge onto an existing connection by identity rather than by name
+ * alone, and gives the rest a real link to open.
  */
 const handleInvitations: Handler = (text, ctx) => {
   const { rows } = readTable(text, ['From', 'To', 'Sent At', 'Direction']);
   for (const row of rows) {
     const direction = (pick(row, 'Direction') ?? '').toUpperCase();
-    // OUTGOING rows name us in "From"; the other party is in "To".
-    const other =
-      direction === 'OUTGOING' ? pick(row, 'To') : pick(row, 'From');
+    // OUTGOING rows name us in "From", so the other party is the invitee.
+    const outgoing = direction === 'OUTGOING';
+    const other = outgoing ? pick(row, 'To') : pick(row, 'From');
     if (!other) continue;
-    upsertPerson(ctx, { fullName: other, connectionDegree: 2 });
+    const url = outgoing
+      ? pick(row, 'inviteeProfileUrl', 'Invitee Profile Url')
+      : pick(row, 'inviterProfileUrl', 'Inviter Profile Url');
+
+    upsertPerson(ctx, {
+      fullName: other,
+      linkedinUrl: url,
+      // An invitation implies "at least 2nd degree", but this person may
+      // already be a confirmed connection — so only fill the gap, never
+      // downgrade a 1st-degree connection just because Invitations.csv is
+      // read after Connections.csv.
+      connectionDegreeIfUnknown: 2,
+    });
   }
 };
 
