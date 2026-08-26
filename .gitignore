@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+*.log
+.DS_Store
+next-env.d.ts
+*.tsbuildinfo
+.env*
+
+# Personal data — never commit any of this.
+# data/ holds the imported graph; Linkedin/ holds raw LinkedIn exports, which
+# include private messages, phone numbers and connections' email addresses.
+data/
+Linkedin/
+*LinkedInDataExport*
+*.zip
