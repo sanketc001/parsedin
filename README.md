@@ -9,7 +9,21 @@ that never leave your machine.
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000
+npm run app          # http://localhost:3000  — build once, then serve
+```
+
+**Use `npm run app`, not `npm run dev`.** `next dev` ships unminified bundles
+with source maps and the HMR runtime: about **8.8 MB of JavaScript per page**
+against **151 KB gzipped** for a production build. That difference is the whole
+reason dev feels sluggish here; it is not the data volume. Reach for `npm run
+dev` only when editing code, and rebuild with `npm run app` to use the app.
+
+Building writes to the same `.next/` that a running dev server is serving from,
+which breaks it mid-flight (`Cannot find module './331.js'`). If you need to
+build while dev is up, send the output elsewhere:
+
+```bash
+BUILD_DIR=.next-build npm run build
 ```
 
 Data lives in `data/parsedin.json` in the project directory. Nothing is sent
@@ -207,6 +221,14 @@ The client fetches the whole database once and does all filtering, graphing and
 question answering in memory — appropriate for a personal network and it keeps
 the UI instant. Storage is a single JSON document; `db.ts` is the only file that
 would change to move to SQLite.
+
+On payload size, measured against a real 833-person network: the dataset is
+1.8 MB of JSON but compresses about 15:1 to ~123 KB, because provenance
+timestamps and batch ids repeat on every record. `/api/dataset` gzips
+explicitly rather than relying on the server's own compression, so this applies
+in development too. Parsing it costs ~10 ms and the client-side hot paths are
+cheap (full-text corpus over 833 people, 1.2 ms; company hierarchy rollup,
+5 ms), so there is no reason to page or shard any of it at this scale.
 
 Deliberately not built, but left room for: job tracking, scraping, messaging,
 calendar integration, AI outreach. The ingest layer is source-agnostic (any
