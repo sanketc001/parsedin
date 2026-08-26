@@ -155,9 +155,127 @@ export interface Company {
   aliases: string[];
   industry: string | null;
   website: string | null;
+  /** Corporate parent, when known. Null for roots and standalone companies. */
+  parentId: string | null;
+  /** How this company relates to its parent. */
+  relationToParent: CompanyRelation | null;
+  /**
+   * True when this record exists only to express hierarchy — a holding company
+   * nobody in the network actually works at. Kept out of employer listings.
+   */
+  synthetic?: boolean;
   sourceBatchIds: string[];
   firstSeenAt: string;
   lastUpdatedAt: string;
+}
+
+/**
+ * How one company relates to another. Only `same-entity` justifies merging —
+ * the rest are real, distinct workplaces that merely roll up together.
+ */
+export type CompanyRelation =
+  | 'subsidiary'
+  | 'brand'
+  | 'division'
+  | 'joint-venture'
+  | 'rebrand'
+  | 'affiliate';
+
+export type ResolutionSource = 'llm' | 'manual';
+
+/** Evidence backing a proposed relationship. */
+export interface Evidence {
+  title: string;
+  url: string;
+  snippet: string;
+}
+
+/**
+ * An alias rule: any company whose normalized key matches `fromKey` resolves to
+ * `canonicalId`. Stored as a rule rather than applied once, so a later import
+ * cannot resurrect the duplicate.
+ */
+export interface AliasRule {
+  id: string;
+  fromKey: string;
+  /** Surface form that produced this rule, for display. */
+  fromName: string;
+  canonicalId: string;
+  source: ResolutionSource;
+  confidence: number | null;
+  reasoning: string | null;
+  evidence: Evidence[];
+  createdAt: string;
+}
+
+/** A parent/child link between two distinct companies. */
+export interface ParentRule {
+  id: string;
+  childId: string;
+  parentId: string;
+  relation: CompanyRelation;
+  source: ResolutionSource;
+  confidence: number | null;
+  reasoning: string | null;
+  evidence: Evidence[];
+  createdAt: string;
+}
+
+/**
+ * A proposal awaiting review. Anything the analyzer was not confident enough
+ * to apply automatically lands here rather than changing the graph silently.
+ */
+export interface Proposal {
+  id: string;
+  kind: 'merge' | 'parent';
+  /** Company ids involved. For merge: [duplicateId, canonicalId]. */
+  companyIds: string[];
+  /** Display names, so a proposal stays readable after a merge moves things. */
+  names: string[];
+  relation: CompanyRelation | null;
+  confidence: number;
+  reasoning: string;
+  evidence: Evidence[];
+  createdAt: string;
+  status: 'pending' | 'rejected';
+}
+
+/**
+ * What an applied action changed, so it can be undone exactly. Auto-applied
+ * actions are only safe because of this.
+ */
+export interface UndoRecord {
+  id: string;
+  kind: 'merge' | 'parent';
+  appliedAt: string;
+  auto: boolean;
+  description: string;
+  confidence: number | null;
+  evidence: Evidence[];
+  /** The alias or parent rule this action created. */
+  ruleId: string;
+  /** For merges: the company record that was absorbed, verbatim. */
+  absorbedCompany?: Company;
+  /** For merges: person ids whose currentCompanyId was rewritten. */
+  rewrittenCurrent?: string[];
+  /** For merges: [personId, positionId] pairs whose companyId was rewritten. */
+  rewrittenPositions?: [string, string][];
+  /** For parent links: the previous parent, to restore on revert. */
+  previousParentId?: string | null;
+  previousRelation?: CompanyRelation | null;
+}
+
+export interface Resolution {
+  aliases: AliasRule[];
+  parents: ParentRule[];
+  proposals: Proposal[];
+  log: UndoRecord[];
+  /** ISO timestamp of the last analyzer run. */
+  lastAnalyzedAt: string | null;
+}
+
+export function emptyResolution(): Resolution {
+  return { aliases: [], parents: [], proposals: [], log: [], lastAnalyzedAt: null };
 }
 
 export interface School {
@@ -248,11 +366,13 @@ export interface Database {
   notes: Note[];
   relationships: Relationship[];
   batches: ImportBatch[];
+  /** Company de-duplication and corporate hierarchy. Survives re-imports. */
+  resolution: Resolution;
 }
 
 export function emptyDatabase(): Database {
   return {
-    version: 1,
+    version: 2,
     self: null,
     people: [],
     companies: [],
@@ -260,5 +380,6 @@ export function emptyDatabase(): Database {
     notes: [],
     relationships: [],
     batches: [],
+    resolution: emptyResolution(),
   };
 }

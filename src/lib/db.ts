@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { type Database, emptyDatabase } from './types';
+import { type Database, emptyDatabase, emptyResolution } from './types';
 
 // ---------------------------------------------------------------------------
 // Storage. A single JSON document on disk, read into memory and written back
@@ -31,13 +31,28 @@ export function loadDb(): Database {
     const raw = fs.readFileSync(DB_PATH, 'utf8');
     const parsed = JSON.parse(raw) as Database;
     // Tolerate documents written by earlier shapes of the model.
-    cache = { ...emptyDatabase(), ...parsed };
+    cache = migrate({ ...emptyDatabase(), ...parsed });
     return cache;
   } catch (err) {
     console.error('[parsedin] could not read database, starting empty:', err);
     cache = emptyDatabase();
     return cache;
   }
+}
+
+/**
+ * Bring a document read from disk up to the current shape. Additive only —
+ * fields gain defaults, nothing is dropped, so an older file keeps working.
+ */
+function migrate(db: Database): Database {
+  if (!db.resolution) db.resolution = emptyResolution();
+  // Older documents predate the hierarchy fields.
+  for (const company of db.companies) {
+    if (company.parentId === undefined) company.parentId = null;
+    if (company.relationToParent === undefined) company.relationToParent = null;
+  }
+  db.version = 2;
+  return db;
 }
 
 /** Block the current thread briefly — used only between write retries. */

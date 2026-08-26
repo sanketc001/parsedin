@@ -59,6 +59,57 @@ Acronyms expand against your data, so **IIT** matches every Indian Institute of
 Technology, **TCS** finds Tata Consultancy Services, and spacing variants like
 **DY Patil** reach "D Y Patil International University".
 
+## Company resolution
+
+Real exports spell one company several ways and scatter a corporate group across
+many legal entities. **Companies → Resolve** cleans this up, using gpt-4o to
+adjudicate retrieved web evidence.
+
+Two separate operations, deliberately not conflated:
+
+- **Merge** — the *same* company written differently. `Reliance Jio Infocomm Ltd`
+  and `Reliance Jio Infocom Limited`; `Akrudi` and `Akurdi`. Rewrites references
+  and absorbs the duplicate. Destructive, so it needs either a web citation or
+  names close enough that the spelling itself proves it.
+- **Parent link** — genuinely different workplaces in one group. Non-destructive:
+  *"who works at JioHotstar"* still answers 8 precisely, while the Reliance group
+  rolls up to 81 across 7 entities. A subsidiary is never merged, however
+  similar the name looks — merging would destroy which entity someone works at.
+
+```
+Reliance Industries Limited [2]
+ ├─ Jio Platforms [28]                    Alphabet Inc.
+ │   ├─ Jio [32]                           └─ Google [12]
+ │   ├─ Reliance Jio Infocom Ltd [3]           ├─ Google Summer of Code [1]
+ │   └─ Reliance Jio [2]                       └─ Google Developer Student Clubs [1]
+ └─ JioStar [6]
+     └─ JioHotstar [8]
+```
+
+**Why web evidence rather than model memory.** Asked directly, gpt-4o does not
+know JioHotstar, JioStar or JioAds at all, and its answer for Viacom18 is stale —
+it reports the Paramount joint venture, missing the 2024 merger into JioStar.
+Corporate structure changes faster than a training snapshot, so every
+relationship is grounded in retrieved text and carries a citation you can open.
+Wikipedia is the default source and needs no key; set `TAVILY_API_KEY` or
+`BRAVE_SEARCH_API_KEY` to use a general search API instead.
+
+**Everything is revertible.** Confident conclusions apply automatically, which is
+only safe because each one records exactly what it changed — the absorbed company
+verbatim, and every person and position whose reference was rewritten. One click
+restores it. Uncertain cases queue for review instead.
+
+**Curation survives re-import.** Merges are stored as *rules* keyed on the
+normalized name, not as one-off record edits, so importing a later export cannot
+resurrect a duplicate you have already dealt with.
+
+How it works: companies are first blocked into candidate clusters locally (shared
+rare tokens, brand prefixes, edit distance) — comparing 553 companies pairwise
+would be 150k comparisons and an unusable prompt. Each cluster is then grounded
+and adjudicated. A final pass reconciles the tops of separate groups, which is
+what discovers `Jio Platforms → Reliance Industries`: those two share no
+distinctive token, so no cluster could ever contain both.
+
 ## Optional: Azure OpenAI
 
 Copy `.env.example` to `.env.local` and fill in:

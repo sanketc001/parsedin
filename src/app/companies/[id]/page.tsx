@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 import { useData } from '@/components/DataProvider';
 import { Empty, PageHeader, PersonLine, Section, Stat } from '@/components/ui';
 import { schoolIds } from '@/lib/derive';
+import { ancestorIds, childIds, descendantIds, rootId } from '@/lib/resolution';
 
 export default function CompanyPage() {
   const params = useParams<{ id: string }>();
@@ -25,6 +26,27 @@ export default function CompanyPage() {
       [...(idx.pastByCompany.get(id) ?? [])].sort((a, b) => a.fullName.localeCompare(b.fullName)),
     [idx, id],
   );
+
+  // Corporate context: the chain above, the entities below, and how many
+  // people the whole group accounts for.
+  const hierarchy = useMemo(() => {
+    const ancestors = ancestorIds(db, id)
+      .map((cid) => idx.companyById.get(cid))
+      .filter((c): c is NonNullable<typeof c> => !!c);
+    const children = childIds(db, id)
+      .map((cid) => idx.companyById.get(cid))
+      .filter((c): c is NonNullable<typeof c> => !!c);
+    const groupIds = descendantIds(db, rootId(db, id));
+    const groupTotal = groupIds.reduce(
+      (sum, cid) =>
+        sum +
+        (idx.currentByCompany.get(cid)?.length ?? 0) +
+        (idx.pastByCompany.get(cid)?.length ?? 0),
+      0,
+    );
+    const root = idx.companyById.get(rootId(db, id));
+    return { ancestors, children, groupIds, groupTotal, root };
+  }, [db, id, idx]);
 
   // Where else do these people study/work? Useful adjacency signal.
   const topSchools = useMemo(() => {
@@ -77,11 +99,88 @@ export default function CompanyPage() {
           <Stat label="Work here now" value={current.length} />
           <Stat label="Worked here" value={past.length} />
           <Stat label="Total known" value={current.length + past.length} />
-          <Stat
-            label="First seen"
-            value={new Date(company.firstSeenAt).toLocaleDateString()}
-          />
+          {hierarchy.groupIds.length > 1 ? (
+            <Stat
+              label="Whole group"
+              value={hierarchy.groupTotal}
+              hint={`${hierarchy.root?.name} · ${hierarchy.groupIds.length} entities`}
+              href={hierarchy.root ? `/companies/${encodeURIComponent(hierarchy.root.id)}` : undefined}
+            />
+          ) : (
+            <Stat label="First seen" value={new Date(company.firstSeenAt).toLocaleDateString()} />
+          )}
         </div>
+
+        {hierarchy.ancestors.length > 0 || hierarchy.children.length > 0 ? (
+          <Section title="Corporate structure">
+            <div className="space-y-2 text-sm">
+              {hierarchy.ancestors.length > 0 ? (
+                <div>
+                  <span className="label mb-1 block">Sits under</span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {[...hierarchy.ancestors].reverse().map((a, i) => (
+                      <span key={a.id} className="flex items-center gap-1.5">
+                        {i > 0 ? <span className="text-slate-600">›</span> : null}
+                        <Link
+                          href={`/companies/${encodeURIComponent(a.id)}`}
+                          className="chip hover:border-accent/50 hover:text-accent-soft"
+                        >
+                          {a.name}
+                        </Link>
+                      </span>
+                    ))}
+                    <span className="text-slate-600">›</span>
+                    <span className="chip border-accent/40 bg-accent/10 text-accent-soft">
+                      {company.name}
+                    </span>
+                  </div>
+                  {company.relationToParent ? (
+                    <div className="mt-1 font-mono text-[10px] text-slate-600">
+                      relation: {company.relationToParent}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {hierarchy.children.length > 0 ? (
+                <div className={hierarchy.ancestors.length > 0 ? 'border-t border-ink-800 pt-2' : ''}>
+                  <span className="label mb-1 block">Contains ({hierarchy.children.length})</span>
+                  <ul className="flex flex-wrap gap-1.5">
+                    {hierarchy.children.map((c) => {
+                      const n =
+                        (idx.currentByCompany.get(c.id)?.length ?? 0) +
+                        (idx.pastByCompany.get(c.id)?.length ?? 0);
+                      return (
+                        <li key={c.id}>
+                          <Link
+                            href={`/companies/${encodeURIComponent(c.id)}`}
+                            className="chip hover:border-accent/50 hover:text-accent-soft"
+                          >
+                            {c.name}
+                            {n > 0 ? (
+                              <span className="font-mono text-[10px] text-slate-500">{n}</span>
+                            ) : null}
+                            {c.relationToParent ? (
+                              <span className="font-mono text-[10px] text-slate-600">
+                                {c.relationToParent}
+                              </span>
+                            ) : null}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ) : null}
+
+              <div className="border-t border-ink-800 pt-2">
+                <Link href="/companies/resolve" className="text-xs text-slate-500 hover:text-slate-300">
+                  review or revert these relationships →
+                </Link>
+              </div>
+            </div>
+          </Section>
+        ) : null}
 
         <div className="grid gap-4 lg:grid-cols-2">
           <Section title="Currently here" count={current.length}>

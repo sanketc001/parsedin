@@ -22,6 +22,22 @@ export function upsertCompany(
   const key = companyKey(name);
   if (!key || !name) return null;
 
+  // Curated alias rules win before anything else. Because resolution is stored
+  // as rules rather than one-off record edits, a later import cannot resurrect
+  // a duplicate that has already been merged away.
+  const rule = db.resolution?.aliases.find((a) => a.fromKey === key);
+  if (rule) {
+    const canonical = db.companies.find((c) => c.id === rule.canonicalId);
+    if (canonical) {
+      if (!canonical.aliases.includes(name)) canonical.aliases.push(name);
+      canonical.sourceBatchIds = uniq([...canonical.sourceBatchIds, batchId]);
+      canonical.lastUpdatedAt = now;
+      return canonical;
+    }
+    // The rule points at a company that no longer exists; fall through and
+    // recreate normally rather than dropping the row.
+  }
+
   let company = db.companies.find((c) => c.nameKey === key);
   if (!company) {
     company = {
@@ -31,6 +47,8 @@ export function upsertCompany(
       aliases: [name],
       industry: null,
       website: null,
+      parentId: null,
+      relationToParent: null,
       sourceBatchIds: [batchId],
       firstSeenAt: now,
       lastUpdatedAt: now,
