@@ -12,6 +12,15 @@ you. That half is what separates the people you actually know from the ones you
 merely clicked *accept* on — for the network this was built against, 18% of
 connections had ever been spoken to.
 
+<!-- showcase -->
+![ParsedIn overview: network stats, people waiting on a reply, top companies, schools and locations](docs/home.png)
+
+| Graph | Inbox with reply drafts |
+|---|---|
+| ![Force-directed graph of people, companies and schools](docs/graph.png) | ![Message threads grouped by who is waiting on whom](docs/inbox.png) |
+
+*Screenshots use the built-in synthetic sample network (Import → Load sample), not real data.*
+
 ## Running it
 
 ```bash
