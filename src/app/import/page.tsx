@@ -5,7 +5,7 @@ import { useRef, useState } from 'react';
 import { useData } from '@/components/DataProvider';
 import { PageHeader, Section } from '@/components/ui';
 import type { ImportBatch } from '@/lib/types';
-import { ENRICHED_TEMPLATE, SUPPORTED_FILES } from '@/lib/ingest/spec';
+import { ENRICHED_TEMPLATE, SUPPORTED_FILES, SUPPORTED_GROUPS } from '@/lib/ingest/spec';
 
 export default function ImportPage() {
   const { refresh, db } = useData();
@@ -129,33 +129,33 @@ export default function ImportPage() {
                 setFiles(Array.from(e.dataTransfer.files));
               }}
               className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
-                dragging ? 'border-accent bg-accent/5' : 'border-ink-600'
+                dragging ? 'border-brand bg-brand/5' : 'border-line-strong'
               }`}
             >
-              <p className="text-sm text-slate-300">
+              <p className="text-sm text-fg-muted">
                 Drop your LinkedIn export <span className="font-mono text-xs">.zip</span>, loose{' '}
                 <span className="font-mono text-xs">.csv</span> files, or an enriched{' '}
                 <span className="font-mono text-xs">.json</span> here
               </p>
-              <p className="mt-1 text-xs text-slate-500">or</p>
+              <p className="mt-1 text-xs text-fg-subtle">or</p>
               <input
                 ref={inputRef}
                 type="file"
                 multiple
                 accept=".zip,.csv,.json"
                 onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-                className="mx-auto mt-2 block text-xs text-slate-400 file:mr-2 file:rounded file:border file:border-ink-600 file:bg-ink-800 file:px-2 file:py-1 file:text-xs file:text-slate-200"
+                className="mx-auto mt-2 block text-xs text-fg-muted file:mr-2 file:rounded file:border file:border-line-strong file:bg-surface-sunken file:px-2 file:py-1 file:text-xs file:text-fg"
               />
             </div>
 
             {files.length > 0 ? (
               <div className="mt-3">
                 <div className="label mb-1">Selected ({files.length})</div>
-                <ul className="max-h-32 space-y-0.5 overflow-y-auto font-mono text-[11px] text-slate-400">
+                <ul className="max-h-32 space-y-0.5 overflow-y-auto font-mono text-[11px] text-fg-muted">
                   {files.map((f) => (
                     <li key={f.name} className="flex justify-between gap-2">
                       <span className="truncate">{f.name}</span>
-                      <span className="shrink-0 text-slate-600">
+                      <span className="shrink-0 text-fg-faint">
                         {(f.size / 1024).toFixed(0)} KB
                       </span>
                     </li>
@@ -182,7 +182,7 @@ export default function ImportPage() {
             </div>
 
             {error ? (
-              <div className="mt-3 rounded border border-red-900/60 bg-red-950/30 p-2 text-xs text-red-300">
+              <div className="mt-3 rounded border border-danger/40 bg-danger/10 p-2 text-xs text-danger">
                 {error}
               </div>
             ) : null}
@@ -191,7 +191,7 @@ export default function ImportPage() {
           </Section>
 
           <Section title="Enriched profile JSON">
-            <div className="space-y-2 text-sm text-slate-400">
+            <div className="space-y-2 text-sm text-fg-muted">
               <p>
                 LinkedIn&apos;s own export gives full career and education history{' '}
                 <em>only for your own profile</em>. For connections it provides just name, profile
@@ -208,7 +208,7 @@ export default function ImportPage() {
                   Download template JSON
                 </button>
               </div>
-              <pre className="mt-2 max-h-64 overflow-auto rounded border border-ink-700 bg-ink-950 p-3 font-mono text-[11px] leading-relaxed text-slate-400">
+              <pre className="mt-2 max-h-64 overflow-auto rounded border border-line bg-canvas p-3 font-mono text-[11px] leading-relaxed text-fg-muted">
                 {JSON.stringify(ENRICHED_TEMPLATE, null, 2)}
               </pre>
             </div>
@@ -217,7 +217,7 @@ export default function ImportPage() {
 
         <div className="space-y-4">
           <Section title="Try it without your data">
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-fg-muted">
               Load a synthetic network of 60 fictional people across real company and school names,
               so search, the graph and the question parser have something to chew on.
             </p>
@@ -229,13 +229,13 @@ export default function ImportPage() {
             >
               {busy ? 'Working…' : 'Load sample network'}
             </button>
-            <p className="mt-2 text-[11px] text-slate-600">
+            <p className="mt-2 text-[11px] text-fg-faint">
               It records as a normal import, so you can clear it like any other.
             </p>
           </Section>
 
           <Section title="How to get your LinkedIn export">
-            <ol className="list-inside list-decimal space-y-1 text-sm text-slate-400">
+            <ol className="list-inside list-decimal space-y-1 text-sm text-fg-muted">
               <li>LinkedIn → Settings &amp; Privacy</li>
               <li>Data Privacy → Get a copy of your data</li>
               <li>
@@ -248,13 +248,26 @@ export default function ImportPage() {
           </Section>
 
           <Section title="Files understood" count={SUPPORTED_FILES.length}>
-            <ul className="space-y-0.5 font-mono text-[11px] text-slate-500">
-              {SUPPORTED_FILES.map((f) => (
-                <li key={f}>{f}</li>
+            <div className="space-y-3">
+              {SUPPORTED_GROUPS.map((group) => (
+                <div key={group.title}>
+                  <div className="label">{group.title}</div>
+                  <p className="mb-1 text-[11px] text-fg-faint">{group.note}</p>
+                  <ul className="space-y-0.5 font-mono text-[11px] text-fg-subtle">
+                    {group.files.map((f) => (
+                      <li key={f}>{f}</li>
+                    ))}
+                  </ul>
+                </div>
               ))}
-              <li className="text-slate-600">*.json (enriched profiles)</li>
-            </ul>
-            <p className="mt-2 text-[11px] text-slate-600">
+              <div>
+                <div className="label">Enrichment</div>
+                <ul className="space-y-0.5 font-mono text-[11px] text-fg-faint">
+                  <li>*.json (enriched profiles)</li>
+                </ul>
+              </div>
+            </div>
+            <p className="mt-2 text-[11px] text-fg-faint">
               Anything else in the archive is listed as skipped rather than silently ignored.
             </p>
           </Section>
@@ -279,36 +292,43 @@ function ImportSummary({ batch }: { batch: ImportBatch }) {
     ['Honors', s.honors],
     ['Companies total', s.companies],
     ['Schools total', s.schools],
+    ['Messages', s.messages],
+    ['Conversations', s.conversations],
+    ['Invitations', s.invitations],
+    ['Endorsements', s.endorsements],
+    ['Follows', s.follows],
+    ['Job records', s.jobRecords],
+    ['Feed activity', s.engagement],
     ['Rows skipped', s.rowsSkipped],
   ];
 
   return (
-    <div className="mt-3 rounded border border-emerald-900/60 bg-emerald-950/20 p-3">
-      <div className="text-sm font-medium text-emerald-300">Imported: {batch.label}</div>
+    <div className="mt-3 rounded border border-success/30 bg-success/10 p-3">
+      <div className="text-sm font-medium text-success">Imported: {batch.label}</div>
       <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 sm:grid-cols-3">
         {rows
           .filter(([, v]) => v !== 0)
           .map(([k, v]) => (
             <div key={k} className="flex justify-between gap-2 text-xs">
-              <span className="text-slate-500">{k}</span>
-              <span className="font-mono text-slate-300">{v}</span>
+              <span className="text-fg-subtle">{k}</span>
+              <span className="font-mono text-fg-muted">{v}</span>
             </div>
           ))}
       </div>
 
       {batch.files.length > 0 ? (
-        <div className="mt-2 text-[11px] text-slate-500">
-          <span className="text-slate-400">Read:</span> {batch.files.join(', ')}
+        <div className="mt-2 text-[11px] text-fg-subtle">
+          <span className="text-fg-muted">Read:</span> {batch.files.join(', ')}
         </div>
       ) : null}
       {batch.skippedFiles.length > 0 ? (
-        <div className="mt-1 text-[11px] text-amber-500/80">
+        <div className="mt-1 text-[11px] text-warn">
           <span>Skipped:</span> {batch.skippedFiles.slice(0, 12).join(', ')}
           {batch.skippedFiles.length > 12 ? ` +${batch.skippedFiles.length - 12} more` : ''}
         </div>
       ) : null}
       {batch.notes.length > 0 ? (
-        <ul className="mt-1 space-y-0.5 text-[11px] text-slate-500">
+        <ul className="mt-1 space-y-0.5 text-[11px] text-fg-subtle">
           {batch.notes.map((n, i) => (
             <li key={i}>{n}</li>
           ))}

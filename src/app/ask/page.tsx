@@ -80,17 +80,17 @@ export default function AskPage() {
         actions={
           <span className="flex items-center gap-3 text-xs">
             {llmAvailable === null ? null : llmAvailable ? (
-              <label className="flex items-center gap-1.5 text-slate-400">
+              <label className="flex items-center gap-1.5 text-fg-muted">
                 <input
                   type="checkbox"
-                  className="accent-accent"
+                  className="accent-brand"
                   checked={localOnly}
                   onChange={(e) => setLocalOnly(e.target.checked)}
                 />
                 local parser only
               </label>
             ) : (
-              <span className="text-slate-500" title="Set AZURE_OPENAI_* in .env.local">
+              <span className="text-fg-subtle" title="Set AZURE_OPENAI_* in .env.local">
                 local parser (no model configured)
               </span>
             )}
@@ -124,7 +124,7 @@ export default function AskPage() {
               type="button"
               onClick={() => void ask(example)}
               disabled={busy}
-              className="chip hover:border-accent/50 hover:text-accent-soft disabled:opacity-50"
+              className="chip hover:border-brand/50 hover:text-brand-dark disabled:opacity-50"
             >
               {example}
             </button>
@@ -132,7 +132,7 @@ export default function AskPage() {
         </div>
 
         {error ? (
-          <div className="rounded border border-red-900/60 bg-red-950/30 p-3 text-sm text-red-300">
+          <div className="rounded border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
             {error}
           </div>
         ) : null}
@@ -145,7 +145,7 @@ export default function AskPage() {
                 <span
                   className={`chip ${
                     result!.engine === 'llm'
-                      ? 'border-fuchsia-800/60 bg-fuchsia-950/40 text-fuchsia-300'
+                      ? 'border-node-self/30 bg-node-self/10 text-node-self'
                       : ''
                   }`}
                   title={
@@ -160,24 +160,24 @@ export default function AskPage() {
             >
               <div className="space-y-2">
                 {result?.reading ? (
-                  <p className="text-sm text-slate-300">{result.reading}</p>
+                  <p className="text-sm text-fg-muted">{result.reading}</p>
                 ) : null}
 
                 {parsed.interpretation.length === 0 && !parsed.aggregation ? (
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-fg-muted">
                     Nothing recognizable — showing no constraints.
                   </p>
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
                     {parsed.aggregation ? (
-                      <span className="chip border-accent/40 bg-accent/10 text-accent-soft">
+                      <span className="chip border-brand/40 bg-brand/10 text-brand-dark">
                         rank by {parsed.aggregation.kind}
                         {parsed.aggregation.scope === 'any' ? ' (ever)' : ''}
                       </span>
                     ) : null}
                     {parsed.interpretation.map((i) => (
                       <span key={i.facet} className="chip">
-                        <span className="text-slate-500">{i.facet}:</span>{' '}
+                        <span className="text-fg-subtle">{i.facet}:</span>{' '}
                         {i.values.slice(0, 4).join(', ')}
                         {i.values.length > 4 ? ` +${i.values.length - 4}` : ''}
                       </span>
@@ -186,13 +186,13 @@ export default function AskPage() {
                 )}
 
                 {result?.llmError ? (
-                  <p className="text-xs text-amber-500/90">
+                  <p className="text-xs text-warn">
                     Model unavailable, answered with the local parser instead: {result.llmError}
                   </p>
                 ) : null}
 
                 {parsed.unresolved.length > 0 ? (
-                  <p className="text-xs text-amber-500/90">
+                  <p className="text-xs text-warn">
                     Not found in your data: {parsed.unresolved.join(', ')} — searched as free text
                     instead.
                   </p>
@@ -211,17 +211,17 @@ export default function AskPage() {
                       const inner = (
                         <div className="relative flex items-center gap-3 rounded px-2 py-1.5">
                           <div
-                            className="absolute inset-y-0 left-0 rounded bg-accent/10"
+                            className="absolute inset-y-0 left-0 rounded bg-brand/10"
                             style={{ width: `${(row.count / max) * 100}%` }}
                             aria-hidden
                           />
-                          <span className="relative w-6 shrink-0 font-mono text-xs text-slate-600">
+                          <span className="relative w-6 shrink-0 text-xs text-fg-faint">
                             {i + 1}
                           </span>
-                          <span className="relative min-w-0 flex-1 truncate text-sm text-slate-200">
+                          <span className="relative min-w-0 flex-1 truncate text-sm text-fg">
                             {row.label}
                           </span>
-                          <span className="relative shrink-0 font-mono text-sm text-slate-300">
+                          <span className="relative shrink-0 text-sm text-fg-muted">
                             {row.count}
                           </span>
                         </div>
@@ -229,7 +229,7 @@ export default function AskPage() {
                       return (
                         <li key={row.key}>
                           {row.href ? (
-                            <Link href={row.href} className="block hover:brightness-125">
+                            <Link href={row.href} className="block hover:bg-surface-hover">
                               {inner}
                             </Link>
                           ) : (
@@ -250,7 +250,7 @@ export default function AskPage() {
                 people.length > 0 && parsed.filters.q ? (
                   <Link
                     href={`/people?q=${encodeURIComponent(parsed.filters.q)}`}
-                    className="text-xs text-slate-500 hover:text-slate-300"
+                    className="text-xs text-fg-subtle hover:text-fg-muted"
                   >
                     open in People →
                   </Link>
@@ -272,7 +272,7 @@ export default function AskPage() {
                     />
                   ))}
                   {people.length > RESULT_LIMIT ? (
-                    <div className="px-3 py-2 text-xs text-slate-500">
+                    <div className="px-3 py-2 text-xs text-fg-subtle">
                       +{people.length - RESULT_LIMIT} more — refine the question or use the People
                       page.
                     </div>
@@ -282,8 +282,8 @@ export default function AskPage() {
             </Section>
           </>
         ) : (
-          <div className="card p-6 text-sm text-slate-400">
-            <p className="font-medium text-slate-200">How this works</p>
+          <div className="card p-6 text-sm text-fg-muted">
+            <p className="font-medium text-fg">How this works</p>
             <p className="mt-2">
               Questions are translated into the same filters the People page uses, and the reading
               is always shown so a misinterpretation is visible rather than mysterious.
@@ -293,26 +293,26 @@ export default function AskPage() {
                 ? 'Azure OpenAI handles the language; only your question text is sent — never any part of your network. Entity names are then resolved locally against your own data.'
                 : 'A local rule-based parser handles this today. Add AZURE_OPENAI_* values to .env.local for broader phrasing support; even then, only the question text is sent — never your network.'}
             </p>
-            <p className="mt-3 font-medium text-slate-300">Understood either way</p>
+            <p className="mt-3 font-medium text-fg-muted">Understood either way</p>
             <ul className="mt-1 list-inside list-disc space-y-1">
               <li>
-                <span className="text-slate-300">works at / is at</span> — current employer
+                <span className="text-fg-muted">works at / is at</span> — current employer
               </li>
               <li>
-                <span className="text-slate-300">previously worked at / ex-</span> — past employer
+                <span className="text-fg-muted">previously worked at / ex-</span> — past employer
               </li>
               <li>
-                <span className="text-slate-300">went to / studied at</span> — school (acronyms
+                <span className="text-fg-muted">went to / studied at</span> — school (acronyms
                 expand against your data, so &quot;IIT&quot; finds every IIT)
               </li>
               <li>
-                <span className="text-slate-300">lives in / based in</span> — location
+                <span className="text-fg-muted">lives in / based in</span> — location
               </li>
               <li>
-                <span className="text-slate-300">knows / skilled in</span> — skills
+                <span className="text-fg-muted">knows / skilled in</span> — skills
               </li>
               <li>
-                <span className="text-slate-300">which companies / schools / cities …</span> —
+                <span className="text-fg-muted">which companies / schools / cities …</span> —
                 ranked counts
               </li>
             </ul>

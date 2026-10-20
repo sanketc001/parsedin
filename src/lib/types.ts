@@ -297,6 +297,35 @@ export interface Note {
   updatedAt: string;
 }
 
+/**
+ * A reply you are composing, or one you have already sent.
+ *
+ * Private and never imported, like notes and ratings. Drafts exist because the
+ * app cannot send a LinkedIn message — no public API covers personal-account
+ * messaging, and a page on localhost cannot borrow the browser's LinkedIn
+ * session. So the app owns the writing and the record-keeping, and hands the
+ * finished text to LinkedIn through the clipboard.
+ *
+ * Sent drafts are kept rather than deleted: they are the only evidence the
+ * archive will never contain, and they are what lets Reconnect stop asking
+ * about a thread you have already answered.
+ */
+export interface Draft {
+  id: string;
+  /**
+   * Stable grouping key — the conversation when there is one, otherwise the
+   * person. At most one draft per key is open (`sentAt === null`) at a time.
+   */
+  key: string;
+  conversationId: string | null;
+  personId: string | null;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+  /** Set when you confirm you actually sent it. */
+  sentAt: string | null;
+}
+
 /** Private relationship assessment. Also never imported. */
 export interface Relationship {
   personId: string;
@@ -304,6 +333,275 @@ export interface Relationship {
   strength: number;
   tags: string[];
   updatedAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Activity: the half of the export that is not a profile.
+//
+// LinkedIn hands over rich *history* about the account owner — every message,
+// invitation, endorsement, follow, job application, post, reaction, login and
+// ad segment. None of it describes what a connection's career looks like, so
+// it lives beside the people graph rather than inside it, and links back by
+// person id wherever a counterparty could be resolved.
+//
+// Every record carries a deterministic id derived from its natural key, so
+// re-importing an overlapping archive updates rather than duplicates.
+// ---------------------------------------------------------------------------
+
+export interface Message {
+  id: string;
+  /** ISO timestamp. */
+  at: string;
+  /** True when the account owner sent it. */
+  outbound: boolean;
+  /** Display name of the sender as the export wrote it. */
+  from: string;
+  subject: string | null;
+  body: string;
+  hasAttachment: boolean;
+}
+
+export interface Conversation {
+  /** LinkedIn's own conversation id — stable across exports. */
+  id: string;
+  title: string | null;
+  /** Resolved counterparties. Empty when the other party was un-attributable. */
+  personIds: string[];
+  /** Counterparty display names, kept even when no person record matched. */
+  participantNames: string[];
+  /** Counterparty profile URLs, for threads with nobody in the graph. */
+  participantUrls: string[];
+  folder: string | null;
+  messages: Message[];
+  /** Denormalized for listing without walking every message. */
+  firstAt: string | null;
+  lastAt: string | null;
+  sent: number;
+  received: number;
+  /** The most recent message came from them. */
+  lastInbound: boolean;
+  /**
+   * A sponsored InMail — an advert dressed as a message. LinkedIn files these
+   * in the same archive as real conversations, and they are overwhelmingly
+   * "unanswered", so counting them as messages you owe a reply to would drown
+   * the signal. Kept, but never counted as contact.
+   */
+  sponsored: boolean;
+  sourceBatchIds: string[];
+}
+
+export type InvitationDirection = 'incoming' | 'outgoing';
+
+export interface InvitationRecord {
+  id: string;
+  personId: string | null;
+  name: string;
+  profileUrl: string | null;
+  direction: InvitationDirection;
+  sentAt: string | null;
+  /** The note attached to the invite. Usually empty; gold when it is not. */
+  message: string | null;
+  sourceBatchIds: string[];
+}
+
+export interface EndorsementRecord {
+  id: string;
+  personId: string | null;
+  name: string;
+  profileUrl: string | null;
+  skill: string;
+  /** 'received' = they endorsed you. */
+  direction: 'received' | 'given';
+  at: string | null;
+  status: string | null;
+  sourceBatchIds: string[];
+}
+
+export interface CompanyFollow {
+  id: string;
+  name: string;
+  companyId: string | null;
+  at: string | null;
+  sourceBatchIds: string[];
+}
+
+export interface MemberFollow {
+  id: string;
+  name: string;
+  personId: string | null;
+  at: string | null;
+  status: string | null;
+  sourceBatchIds: string[];
+}
+
+export interface JobApplication {
+  id: string;
+  at: string | null;
+  company: string | null;
+  companyId: string | null;
+  title: string | null;
+  url: string | null;
+  resume: string | null;
+  sourceBatchIds: string[];
+}
+
+export interface SavedJob {
+  id: string;
+  at: string | null;
+  company: string | null;
+  companyId: string | null;
+  title: string | null;
+  url: string | null;
+  sourceBatchIds: string[];
+}
+
+export interface JobAlert {
+  id: string;
+  keywords: string | null;
+  location: string | null;
+  sourceBatchIds: string[];
+}
+
+export interface JobPreferences {
+  locations: string[];
+  jobTitles: string[];
+  jobTypes: string[];
+  industries: string[];
+  dreamCompanies: string[];
+  openToRecruiters: boolean | null;
+  urgency: string | null;
+  visibility: string | null;
+  introduction: string | null;
+}
+
+export type EngagementKind = 'post' | 'comment' | 'reaction' | 'vote';
+
+/** One thing the account owner did in the feed. */
+export interface EngagementItem {
+  id: string;
+  kind: EngagementKind;
+  at: string;
+  /** Permalink to the activity. */
+  url: string | null;
+  /** Post commentary, comment body, reaction type, or poll option. */
+  text: string | null;
+  /** Reaction type (LIKE / PRAISE / ...), only for reactions. */
+  reactionType: string | null;
+  /** Audience of a post. */
+  visibility: string | null;
+  sourceBatchIds: string[];
+}
+
+export interface LearningItem {
+  id: string;
+  title: string;
+  description: string | null;
+  contentType: string | null;
+  lastWatchedAt: string | null;
+  completedAt: string | null;
+  saved: boolean;
+  sourceBatchIds: string[];
+}
+
+export interface EventItem {
+  id: string;
+  name: string;
+  time: string | null;
+  status: string | null;
+  url: string | null;
+  sourceBatchIds: string[];
+}
+
+/** One targeting facet LinkedIn built about you, e.g. "Job Titles" -> [...]. */
+export interface AdSegment {
+  category: string;
+  values: string[];
+}
+
+export interface InferenceRecord {
+  category: string;
+  type: string;
+  description: string | null;
+  /** LinkedIn's own verdict, usually "Yes" / "No". */
+  value: string;
+}
+
+export interface AdProfile {
+  segments: AdSegment[];
+  inferences: InferenceRecord[];
+  /** Ads you clicked. Only the count and range are worth keeping. */
+  adsClicked: number;
+  adsClickedFirstAt: string | null;
+  adsClickedLastAt: string | null;
+  /** Off-LinkedIn ad network activity, tallied by action. */
+  offsiteActions: { action: string; count: number }[];
+  offsiteApps: { app: string; count: number }[];
+}
+
+export interface LoginRecord {
+  id: string;
+  at: string;
+  ip: string | null;
+  userAgent: string | null;
+  type: string | null;
+}
+
+export interface SecurityChallenge {
+  id: string;
+  at: string;
+  ip: string | null;
+  country: string | null;
+  userAgent: string | null;
+  type: string | null;
+}
+
+export interface VerificationRecord {
+  id: string;
+  type: string;
+  organization: string | null;
+  email: string | null;
+  verifiedAt: string | null;
+  expiresAt: string | null;
+}
+
+export interface Activity {
+  conversations: Conversation[];
+  invitations: InvitationRecord[];
+  endorsements: EndorsementRecord[];
+  companyFollows: CompanyFollow[];
+  memberFollows: MemberFollow[];
+  jobApplications: JobApplication[];
+  savedJobs: SavedJob[];
+  jobAlerts: JobAlert[];
+  jobPreferences: JobPreferences | null;
+  engagement: EngagementItem[];
+  learning: LearningItem[];
+  events: EventItem[];
+  adProfile: AdProfile | null;
+  logins: LoginRecord[];
+  challenges: SecurityChallenge[];
+  verifications: VerificationRecord[];
+}
+
+export function emptyActivity(): Activity {
+  return {
+    conversations: [],
+    invitations: [],
+    endorsements: [],
+    companyFollows: [],
+    memberFollows: [],
+    jobApplications: [],
+    savedJobs: [],
+    jobAlerts: [],
+    jobPreferences: null,
+    engagement: [],
+    learning: [],
+    events: [],
+    adProfile: null,
+    logins: [],
+    challenges: [],
+    verifications: [],
+  };
 }
 
 export interface ImportBatch {
@@ -335,6 +633,14 @@ export interface ImportStats {
   schools: number;
   selfProfileUpdated: boolean;
   rowsSkipped: number;
+  /** Activity-layer rows, counted separately from profile facts. */
+  messages: number;
+  conversations: number;
+  invitations: number;
+  endorsements: number;
+  follows: number;
+  jobRecords: number;
+  engagement: number;
 }
 
 export function emptyStats(): ImportStats {
@@ -353,6 +659,13 @@ export function emptyStats(): ImportStats {
     schools: 0,
     selfProfileUpdated: false,
     rowsSkipped: 0,
+    messages: 0,
+    conversations: 0,
+    invitations: 0,
+    endorsements: 0,
+    follows: 0,
+    jobRecords: 0,
+    engagement: 0,
   };
 }
 
@@ -365,21 +678,27 @@ export interface Database {
   schools: School[];
   notes: Note[];
   relationships: Relationship[];
+  /** Replies you have composed. Private, never imported. */
+  drafts: Draft[];
   batches: ImportBatch[];
   /** Company de-duplication and corporate hierarchy. Survives re-imports. */
   resolution: Resolution;
+  /** Messages, engagement, job search and everything else the export carries. */
+  activity: Activity;
 }
 
 export function emptyDatabase(): Database {
   return {
-    version: 2,
+    version: 4,
     self: null,
     people: [],
     companies: [],
     schools: [],
     notes: [],
     relationships: [],
+    drafts: [],
     batches: [],
     resolution: emptyResolution(),
+    activity: emptyActivity(),
   };
 }

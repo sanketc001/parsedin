@@ -3,24 +3,30 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
+  /* Height of the fixed chrome, so sticky offsets and full-height panes stay
+     correct in one place instead of as magic numbers in three files. */
+  --nav-h: 3.25rem;
+  --header-h: 4.5rem;
+  --chrome-h: calc(var(--nav-h) + var(--header-h));
 }
 
 body {
-  @apply bg-ink-950 text-slate-200 antialiased;
+  @apply bg-canvas text-fg antialiased;
+  font-size: 14px;
 }
 
 /* Thin, unobtrusive scrollbars — there are a lot of scrolling lists here. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2b3140 transparent;
+  scrollbar-color: #c4c2bd transparent;
 }
 *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #2b3140;
+  background: #c4c2bd;
   border-radius: 999px;
   border: 3px solid transparent;
   background-clip: content-box;
@@ -29,43 +35,67 @@ body {
   background: transparent;
 }
 
+/* Keyboard focus must always be visible; LinkedIn uses a solid brand outline
+   rather than a soft ring. */
+:focus-visible {
+  outline: 2px solid theme('colors.brand.DEFAULT');
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 @layer components {
   .card {
-    @apply rounded-lg border border-ink-700 bg-ink-900;
+    @apply rounded-lg border border-line bg-surface shadow-card;
   }
 
+  /* Buttons are pills — the single most recognizable shape in LinkedIn's UI.
+     Secondary is an outline that thickens on hover rather than filling. */
   .btn {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-ink-600
-           bg-ink-800 px-3 py-1.5 text-sm text-slate-200 transition-colors
-           hover:border-ink-500 hover:bg-ink-700
-           disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-full border
+           border-line-strong bg-surface px-4 py-1.5 text-sm font-semibold
+           text-fg-muted transition-colors
+           hover:border-fg-muted hover:bg-surface-hover hover:text-fg
+           disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface;
   }
 
   .btn-primary {
-    @apply border-accent/60 bg-accent/15 text-accent-soft hover:border-accent hover:bg-accent/25;
+    @apply border-transparent bg-brand text-white
+           hover:border-transparent hover:bg-brand-dark hover:text-white;
   }
 
   .btn-danger {
-    @apply border-red-900/70 bg-red-950/40 text-red-300 hover:border-red-700 hover:bg-red-950/70;
+    @apply border-danger/60 bg-surface text-danger
+           hover:border-danger hover:bg-danger/5 hover:text-danger;
   }
 
+  /* Inputs stay squarer than buttons, the way LinkedIn's forms do. */
   .input {
-    @apply w-full rounded-md border border-ink-600 bg-ink-850 px-3 py-1.5 text-sm
-           text-slate-100 placeholder:text-slate-500
-           focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/40;
+    @apply w-full rounded border border-line-strong bg-surface px-3 py-1.5 text-sm
+           text-fg placeholder:text-fg-faint
+           focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand;
   }
 
   .chip {
-    @apply inline-flex items-center gap-1 rounded-full border border-ink-600 bg-ink-800
-           px-2 py-0.5 text-xs text-slate-300;
+    @apply inline-flex items-center gap-1 rounded-full border border-line-strong
+           bg-surface px-2.5 py-0.5 text-xs font-medium text-fg-muted;
   }
 
   .label {
-    @apply text-[11px] font-medium uppercase tracking-wider text-slate-500;
+    @apply text-[11px] font-semibold uppercase tracking-wider text-fg-subtle;
   }
 
   .link {
-    @apply text-accent-soft underline decoration-accent/30 underline-offset-2
-           hover:decoration-accent;
+    @apply font-semibold text-brand hover:text-brand-dark hover:underline;
   }
 }

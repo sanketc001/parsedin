@@ -1,6 +1,7 @@
 node_modules/
 .next/
-.next-build/
+# next.config.mjs lets BUILD_DIR point a build anywhere, so ignore the family.
+.next-*/
 out/
 *.log
 .DS_Store

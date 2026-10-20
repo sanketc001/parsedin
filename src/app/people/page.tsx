@@ -13,6 +13,8 @@ import {
   sortPeople,
   type Filters,
   type SortKey,
+  type ContactFilter,
+  CONTACT_FILTERS,
 } from '@/lib/query/filters';
 
 const SORTS: { value: SortKey; label: string }[] = [
@@ -21,6 +23,8 @@ const SORTS: { value: SortKey; label: string }[] = [
   { value: 'recently-connected', label: 'Recently connected' },
   { value: 'recently-updated', label: 'Recently updated' },
   { value: 'strength', label: 'Relationship strength' },
+  { value: 'contact', label: 'Contact signal' },
+  { value: 'last-contact', label: 'Last contact' },
   { value: 'detail', label: 'Profile depth' },
 ];
 
@@ -76,6 +80,11 @@ function PeopleBrowser() {
       next.degrees = degrees.map(Number).filter((n) => !Number.isNaN(n));
       touched = true;
     }
+    const contact = params.get('contact');
+    if (contact && CONTACT_FILTERS.some((c) => c.value === contact)) {
+      next.contact = contact as ContactFilter;
+      touched = true;
+    }
     if (touched) setFilters(next);
   }, [params]);
 
@@ -112,7 +121,7 @@ function PeopleBrowser() {
               onChange={(e) => setFilters({ ...filters, q: e.target.value })}
             />
             <select
-              className="rounded-md border border-ink-600 bg-ink-850 px-2 py-1.5 text-sm"
+              className="rounded-md border border-line-strong bg-surface-sunken px-2 py-1.5 text-sm"
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
             >
@@ -127,7 +136,7 @@ function PeopleBrowser() {
       />
 
       <div className="flex items-start">
-        <div className="sticky top-[73px] max-h-[calc(100vh-73px)]">
+        <div className="sticky top-[var(--chrome-h)] max-h-[calc(100vh-var(--chrome-h))]">
           <FilterPanel
             filters={filters}
             facets={facets}
@@ -167,7 +176,7 @@ function PeopleBrowser() {
             <div className="mt-3 text-center">
               <button type="button" className="btn" onClick={() => setLimit((n) => n + PAGE_SIZE)}>
                 Show {Math.min(PAGE_SIZE, results.length - visible.length)} more
-                <span className="font-mono text-xs text-slate-500">
+                <span className="text-xs text-fg-subtle">
                   {visible.length}/{results.length}
                 </span>
               </button>

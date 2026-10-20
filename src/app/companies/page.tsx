@@ -97,14 +97,14 @@ export default function CompaniesPage() {
         }
         actions={
           <>
-            <div className="flex overflow-hidden rounded-md border border-ink-600">
+            <div className="flex overflow-hidden rounded-md border border-line-strong">
               {(['flat', 'grouped'] as View[]).map((v) => (
                 <button
                   key={v}
                   type="button"
                   onClick={() => setView(v)}
                   className={`px-2 py-1.5 text-xs ${
-                    view === v ? 'bg-accent/15 text-accent-soft' : 'text-slate-400 hover:bg-ink-800'
+                    view === v ? 'bg-brand/15 text-brand-dark' : 'text-fg-muted hover:bg-surface-sunken'
                   }`}
                 >
                   {v === 'flat' ? 'All' : 'Groups'}
@@ -119,7 +119,7 @@ export default function CompaniesPage() {
             />
             {view === 'flat' ? (
               <select
-                className="rounded-md border border-ink-600 bg-ink-850 px-2 py-1.5 text-sm"
+                className="rounded-md border border-line-strong bg-surface-sunken px-2 py-1.5 text-sm"
                 value={sort}
                 onChange={(e) => setSort(e.target.value as Sort)}
               >
@@ -131,7 +131,7 @@ export default function CompaniesPage() {
             <Link href="/companies/resolve" className="btn">
               Resolve
               {db.resolution.proposals.filter((p) => p.status === 'pending').length > 0 ? (
-                <span className="font-mono text-[10px] text-amber-400">
+                <span className="text-[10px] text-warn">
                   {db.resolution.proposals.filter((p) => p.status === 'pending').length}
                 </span>
               ) : null}
@@ -154,19 +154,19 @@ export default function CompaniesPage() {
             <div className="space-y-3">
               {groups.map((g) => (
                 <div key={g.root} className="card overflow-hidden">
-                  <div className="relative flex items-center justify-between gap-2 border-b border-ink-700 bg-ink-850 px-3 py-2">
+                  <div className="relative flex items-center justify-between gap-2 border-b border-line bg-surface-sunken px-3 py-2">
                     <div
-                      className="absolute inset-y-0 left-0 bg-accent/5"
+                      className="absolute inset-y-0 left-0 bg-brand/5"
                       style={{ width: `${(g.total / groupMax) * 100}%` }}
                       aria-hidden
                     />
                     <Link
                       href={`/companies/${encodeURIComponent(g.root)}`}
-                      className="relative truncate text-sm font-medium text-slate-100 hover:text-accent-soft"
+                      className="relative truncate text-sm font-medium text-fg hover:text-brand-dark"
                     >
                       {g.rootName}
                     </Link>
-                    <span className="relative shrink-0 font-mono text-xs text-slate-400">
+                    <span className="relative shrink-0 text-xs text-fg-muted">
                       {g.total} across {g.members.length}
                     </span>
                   </div>
@@ -174,22 +174,22 @@ export default function CompaniesPage() {
                     <Link
                       key={m.company.id}
                       href={`/companies/${encodeURIComponent(m.company.id)}`}
-                      className="flex items-center justify-between gap-2 border-b border-ink-800 px-3 py-1.5 pl-6 last:border-0 hover:bg-ink-850"
+                      className="flex items-center justify-between gap-2 border-b border-line px-3 py-1.5 pl-6 last:border-0 hover:bg-surface-sunken"
                     >
-                      <span className="min-w-0 truncate text-sm text-slate-300">
+                      <span className="min-w-0 truncate text-sm text-fg-muted">
                         {m.company.id === g.root ? '(itself)' : m.company.name}
                         {m.company.relationToParent ? (
-                          <span className="ml-2 font-mono text-[10px] text-slate-600">
+                          <span className="ml-2 text-[10px] text-fg-faint">
                             {m.company.relationToParent}
                           </span>
                         ) : null}
                         {m.company.synthetic ? (
-                          <span className="ml-2 font-mono text-[10px] text-slate-600">
+                          <span className="ml-2 text-[10px] text-fg-faint">
                             holding
                           </span>
                         ) : null}
                       </span>
-                      <span className="shrink-0 font-mono text-xs text-slate-500">
+                      <span className="shrink-0 text-xs text-fg-subtle">
                         {m.current + m.past}
                       </span>
                     </Link>
@@ -208,7 +208,7 @@ export default function CompaniesPage() {
           </Empty>
         ) : (
           <div className="card overflow-hidden">
-            <div className="grid grid-cols-[1fr_5rem_5rem_8rem] items-center gap-2 border-b border-ink-700 bg-ink-850 px-3 py-2 text-[11px] uppercase tracking-wider text-slate-500">
+            <div className="grid grid-cols-[1fr_5rem_5rem_8rem] items-center gap-2 border-b border-line bg-surface-sunken px-3 py-2 text-[11px] uppercase tracking-wider text-fg-subtle">
               <span>Company</span>
               <span className="text-right">Current</span>
               <span className="text-right">Past</span>
@@ -221,31 +221,31 @@ export default function CompaniesPage() {
                 <Link
                   key={company.id}
                   href={`/companies/${encodeURIComponent(company.id)}`}
-                  className="relative grid grid-cols-[1fr_5rem_5rem_8rem] items-center gap-2 border-b border-ink-800 px-3 py-2 last:border-0 hover:bg-ink-850"
+                  className="relative grid grid-cols-[1fr_5rem_5rem_8rem] items-center gap-2 border-b border-line px-3 py-2 last:border-0 hover:bg-surface-sunken"
                 >
                   <div
-                    className="absolute inset-y-0 left-0 bg-accent/5"
+                    className="absolute inset-y-0 left-0 bg-brand/5"
                     style={{ width: `${(total / max) * 100}%` }}
                     aria-hidden
                   />
-                  <span className="relative min-w-0 truncate text-sm text-slate-200">
+                  <span className="relative min-w-0 truncate text-sm text-fg">
                     {company.name}
                     {inGroup ? (
                       <span
-                        className="ml-2 font-mono text-[10px] text-slate-600"
+                        className="ml-2 text-[10px] text-fg-faint"
                         title={`part of the ${idx.companyById.get(rootId(db, company.id))?.name} group`}
                       >
                         ⤴ {idx.companyById.get(rootId(db, company.id))?.name}
                       </span>
                     ) : null}
                   </span>
-                  <span className="relative text-right font-mono text-xs text-slate-300">
+                  <span className="relative text-right text-xs text-fg-muted">
                     {current}
                   </span>
-                  <span className="relative text-right font-mono text-xs text-slate-500">
+                  <span className="relative text-right text-xs text-fg-subtle">
                     {past}
                   </span>
-                  <span className="relative text-right font-mono text-xs text-slate-400">
+                  <span className="relative text-right text-xs text-fg-muted">
                     {total}
                   </span>
                 </Link>

@@ -66,28 +66,57 @@ export default function SourcesPage() {
           ) : (
             <ul className="space-y-3">
               {db.batches.map((batch) => (
-                <li key={batch.id} className="rounded border border-ink-800 bg-ink-850 p-3">
+                <li key={batch.id} className="rounded border border-line bg-surface-sunken p-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="text-sm font-medium text-slate-100">{batch.label}</span>
-                    <span className="font-mono text-[11px] text-slate-500">
+                    <span className="text-sm font-medium text-fg">{batch.label}</span>
+                    <span className="text-[11px] text-fg-subtle">
                       {new Date(batch.importedAt).toLocaleString()}
                     </span>
                   </div>
 
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px]">
                     <span className="chip font-mono">{batch.kind}</span>
-                    <span className="text-slate-500">
+                    <span className="text-fg-subtle">
                       +{batch.stats.peopleCreated} created · {batch.stats.peopleUpdated} updated ·{' '}
                       {contribution.get(batch.id) ?? 0} people reference this import
                     </span>
                   </div>
 
+                  {/* The activity layer is counted separately: these rows are
+                      history about you, not facts about a person. */}
+                  {batch.stats.messages ||
+                  batch.stats.endorsements ||
+                  batch.stats.engagement ||
+                  batch.stats.jobRecords ? (
+                    <div className="mt-1 text-[11px] text-fg-faint">
+                      {[
+                        batch.stats.messages ? `${batch.stats.messages} messages` : null,
+                        batch.stats.conversations
+                          ? `${batch.stats.conversations} threads`
+                          : null,
+                        batch.stats.invitations
+                          ? `${batch.stats.invitations} invitations`
+                          : null,
+                        batch.stats.endorsements
+                          ? `${batch.stats.endorsements} endorsements`
+                          : null,
+                        batch.stats.follows ? `${batch.stats.follows} follows` : null,
+                        batch.stats.jobRecords ? `${batch.stats.jobRecords} job records` : null,
+                        batch.stats.engagement
+                          ? `${batch.stats.engagement} feed actions`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </div>
+                  ) : null}
+
                   <div className="mt-2 grid gap-2 text-[11px] sm:grid-cols-2">
                     <div>
                       <span className="label block">Files read ({batch.files.length})</span>
-                      <ul className="mt-0.5 space-y-0.5 font-mono text-slate-500">
+                      <ul className="mt-0.5 space-y-0.5 font-mono text-fg-subtle">
                         {batch.files.length === 0 ? (
-                          <li className="text-slate-600">none</li>
+                          <li className="text-fg-faint">none</li>
                         ) : (
                           batch.files.map((f) => <li key={f}>{f}</li>)
                         )}
@@ -98,7 +127,7 @@ export default function SourcesPage() {
                         <span className="label block">
                           Skipped ({batch.skippedFiles.length})
                         </span>
-                        <ul className="mt-0.5 max-h-28 space-y-0.5 overflow-y-auto font-mono text-slate-600">
+                        <ul className="mt-0.5 max-h-28 space-y-0.5 overflow-y-auto font-mono text-fg-faint">
                           {batch.skippedFiles.map((f) => (
                             <li key={f}>{f}</li>
                           ))}
@@ -108,14 +137,14 @@ export default function SourcesPage() {
                   </div>
 
                   {batch.notes.length > 0 ? (
-                    <ul className="mt-2 space-y-0.5 border-t border-ink-800 pt-2 text-[11px] text-slate-500">
+                    <ul className="mt-2 space-y-0.5 border-t border-line pt-2 text-[11px] text-fg-subtle">
                       {batch.notes.map((n, i) => (
                         <li key={i}>{n}</li>
                       ))}
                     </ul>
                   ) : null}
 
-                  <div className="mt-2 font-mono text-[10px] text-slate-600">id {batch.id}</div>
+                  <div className="mt-2 text-[10px] text-fg-faint">id {batch.id}</div>
                 </li>
               ))}
             </ul>
@@ -133,14 +162,14 @@ export default function SourcesPage() {
                   return (
                     <li key={label} className="relative flex items-center justify-between gap-2 rounded px-2 py-1">
                       <div
-                        className="absolute inset-y-0 left-0 rounded bg-accent/10"
+                        className="absolute inset-y-0 left-0 rounded bg-brand/10"
                         style={{ width: `${(count / max) * 100}%` }}
                         aria-hidden
                       />
-                      <span className="relative truncate font-mono text-xs text-slate-300">
+                      <span className="relative truncate text-xs text-fg-muted">
                         {label}
                       </span>
-                      <span className="relative shrink-0 font-mono text-xs text-slate-500">
+                      <span className="relative shrink-0 font-mono text-xs text-fg-subtle">
                         {count}
                       </span>
                     </li>
@@ -151,7 +180,7 @@ export default function SourcesPage() {
           </Section>
 
           <Section title="What is private">
-            <div className="space-y-2 text-sm text-slate-400">
+            <div className="space-y-2 text-sm text-fg-muted">
               <p>
                 Notes and relationship-strength ratings are yours — they are never produced by an
                 import and are never included in one. Clearing imported data from the Import page
@@ -160,10 +189,10 @@ export default function SourcesPage() {
               <p>
                 Everything else carries the import batch that introduced it plus a timestamp. On a
                 person&apos;s profile, the small{' '}
-                <span className="font-mono text-slate-500">ⓘ</span> next to a field reveals the
+                <span className="font-mono text-fg-subtle">ⓘ</span> next to a field reveals the
                 exact file and import time behind that value.
               </p>
-              <p className="font-mono text-[11px] text-slate-600">
+              <p className="text-[11px] text-fg-faint">
                 stored at data/parsedin.json
               </p>
             </div>

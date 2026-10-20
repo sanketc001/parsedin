@@ -46,7 +46,7 @@ export default function SchoolsPage() {
               onChange={(e) => setQ(e.target.value)}
             />
             <select
-              className="rounded-md border border-ink-600 bg-ink-850 px-2 py-1.5 text-sm"
+              className="rounded-md border border-line-strong bg-surface-sunken px-2 py-1.5 text-sm"
               value={sort}
               onChange={(e) => setSort(e.target.value as 'people' | 'name')}
             >
@@ -59,8 +59,8 @@ export default function SchoolsPage() {
 
       <div className="p-6">
         {rows.length === 0 ? (
-          <div className="card p-6 text-sm text-slate-400">
-            <p className="font-medium text-slate-200">No education data yet</p>
+          <div className="card p-6 text-sm text-fg-muted">
+            <p className="font-medium text-fg">No education data yet</p>
             <p className="mt-2">
               LinkedIn&apos;s data export includes education only for your own profile — not for
               your connections. To populate this view, add profile detail through an{' '}
@@ -72,7 +72,7 @@ export default function SchoolsPage() {
           </div>
         ) : (
           <div className="card overflow-hidden">
-            <div className="grid grid-cols-[1fr_6rem] items-center gap-2 border-b border-ink-700 bg-ink-850 px-3 py-2 text-[11px] uppercase tracking-wider text-slate-500">
+            <div className="grid grid-cols-[1fr_6rem] items-center gap-2 border-b border-line bg-surface-sunken px-3 py-2 text-[11px] uppercase tracking-wider text-fg-subtle">
               <span>School</span>
               <span className="text-right">People</span>
             </div>
@@ -80,15 +80,15 @@ export default function SchoolsPage() {
               <Link
                 key={school.id}
                 href={`/schools/${encodeURIComponent(school.id)}`}
-                className="relative grid grid-cols-[1fr_6rem] items-center gap-2 border-b border-ink-800 px-3 py-2 last:border-0 hover:bg-ink-850"
+                className="relative grid grid-cols-[1fr_6rem] items-center gap-2 border-b border-line px-3 py-2 last:border-0 hover:bg-surface-sunken"
               >
                 <div
-                  className="absolute inset-y-0 left-0 bg-emerald-500/5"
+                  className="absolute inset-y-0 left-0 bg-success/10"
                   style={{ width: `${(count / max) * 100}%` }}
                   aria-hidden
                 />
-                <span className="relative truncate text-sm text-slate-200">{school.name}</span>
-                <span className="relative text-right font-mono text-xs text-slate-400">{count}</span>
+                <span className="relative truncate text-sm text-fg">{school.name}</span>
+                <span className="relative text-right text-xs text-fg-muted">{count}</span>
               </Link>
             ))}
           </div>

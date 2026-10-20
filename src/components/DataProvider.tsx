@@ -9,7 +9,13 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { emptyDatabase, type Database, type Note, type Relationship } from '@/lib/types';
+import {
+  emptyDatabase,
+  type Database,
+  type Draft,
+  type Note,
+  type Relationship,
+} from '@/lib/types';
 import { buildIndexes, type Indexes } from '@/lib/derive';
 
 // ---------------------------------------------------------------------------
@@ -32,6 +38,18 @@ interface DataContextValue {
   deleteNote: (personId: string, noteId: string) => Promise<void>;
   setStrength: (personId: string, strength: number | null) => Promise<void>;
   setTags: (personId: string, tags: string[]) => Promise<void>;
+  /** The open (unsent) draft for a thread or person, if there is one. */
+  draftFor: (key: string) => Draft | null;
+  /** Sent replies for a person, newest first — the record LinkedIn will not have. */
+  sentDraftsFor: (personId: string) => Draft[];
+  saveDraft: (target: DraftTarget, body: string) => Promise<void>;
+  markDraftSent: (draftId: string, sent?: boolean) => Promise<void>;
+  deleteDraft: (draftId: string) => Promise<void>;
+}
+
+export interface DraftTarget {
+  conversationId?: string | null;
+  personId?: string | null;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -142,6 +160,59 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [mutate],
   );
 
+  const openDrafts = useMemo(() => {
+    const map = new Map<string, Draft>();
+    for (const draft of db.drafts) {
+      if (!draft.sentAt) map.set(draft.key, draft);
+    }
+    return map;
+  }, [db.drafts]);
+
+  const sentDrafts = useMemo(() => {
+    const map = new Map<string, Draft[]>();
+    for (const draft of db.drafts) {
+      if (!draft.sentAt || !draft.personId) continue;
+      const list = map.get(draft.personId);
+      if (list) list.push(draft);
+      else map.set(draft.personId, [draft]);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => (b.sentAt ?? '').localeCompare(a.sentAt ?? ''));
+    }
+    return map;
+  }, [db.drafts]);
+
+  const draftFor = useCallback((key: string) => openDrafts.get(key) ?? null, [openDrafts]);
+  const sentDraftsFor = useCallback(
+    (personId: string) => sentDrafts.get(personId) ?? [],
+    [sentDrafts],
+  );
+
+  const saveDraft = useCallback(
+    (target: DraftTarget, body: string) =>
+      mutate('/api/drafts', {
+        method: 'POST',
+        body: JSON.stringify({
+          conversationId: target.conversationId ?? null,
+          personId: target.personId ?? null,
+          body,
+        }),
+      }),
+    [mutate],
+  );
+
+  const markDraftSent = useCallback(
+    (draftId: string, sent = true) =>
+      mutate('/api/drafts', { method: 'PATCH', body: JSON.stringify({ draftId, sent }) }),
+    [mutate],
+  );
+
+  const deleteDraft = useCallback(
+    (draftId: string) =>
+      mutate('/api/drafts', { method: 'PATCH', body: JSON.stringify({ draftId, delete: true }) }),
+    [mutate],
+  );
+
   const setTags = useCallback(
     (personId: string, tags: string[]) => {
       const current = relByPerson.get(personId);
@@ -167,10 +238,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
       deleteNote,
       setStrength,
       setTags,
+      draftFor,
+      sentDraftsFor,
+      saveDraft,
+      markDraftSent,
+      deleteDraft,
     }),
     [
       db, idx, loading, error, refresh, notesFor, relationshipFor,
       addNote, updateNote, deleteNote, setStrength, setTags,
+      draftFor, sentDraftsFor, saveDraft, markDraftSent, deleteDraft,
     ],
   );
 

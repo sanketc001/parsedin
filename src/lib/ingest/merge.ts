@@ -14,6 +14,7 @@ import {
 } from '../types';
 import { upsertCompany, upsertSchool } from '../entities';
 import {
+  canonicalUrl,
   clean,
   companyKey,
   dateSortKey,
@@ -214,7 +215,9 @@ export function applyPersonSeed(ctx: Ctx, person: Person, seed: PersonSeed): voi
     setField(person, 'connectionDegree', seed.connectionDegreeIfUnknown, ctx);
   }
 
-  const url = clean(seed.linkedinUrl);
+  // Stored absolute so the value is directly usable as an href; identity still
+  // comes from urlKey, which ignores scheme and host prefix either way.
+  const url = canonicalUrl(seed.linkedinUrl);
   if (url) {
     setField(person, 'linkedinUrl', url, ctx);
     person.urlKey = toUrlKey(url);

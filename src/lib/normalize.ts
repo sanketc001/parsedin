@@ -71,6 +71,23 @@ export function schoolKey(value: unknown): string {
   return stripped || base;
 }
 
+/**
+ * Canonical display form of a profile URL: always absolute.
+ *
+ * Sources disagree — Connections.csv writes `https://www.linkedin.com/in/x`,
+ * the endorsement files write `www.linkedin.com/in/x`. Stored unchanged, the
+ * second form is a *relative* href and links to it break. Identity still comes
+ * from `urlKey`; this only fixes what gets rendered.
+ */
+export function canonicalUrl(value: unknown): string | null {
+  const s = clean(value);
+  if (!s) return null;
+  if (/^https?:\/\//i.test(s)) return s;
+  if (/^\/\//.test(s)) return `https:${s}`;
+  if (/^[a-z0-9-]+(\.[a-z0-9-]+)+\//i.test(s)) return `https://${s}`;
+  return s;
+}
+
 /** Normalize a LinkedIn profile URL down to its stable identity portion. */
 export function urlKey(value: unknown): string | null {
   const s = clean(value);
@@ -148,6 +165,72 @@ export function parseDate(value: unknown): string | null {
       const day = String(d.getDate()).padStart(2, '0');
       return `${y}-${mo}-${day}`;
     }
+  }
+  return null;
+}
+
+/**
+ * Parse the wall-clock timestamps the activity files use into a full ISO
+ * string. Unlike `parseDate` these carry a time of day, and the export mixes
+ * at least four shapes across files:
+ *
+ *   2026-08-23 11:01:04 UTC      messages, reactions, comments
+ *   2026/08/21 11:04:13 UTC      ads, endorsements
+ *   Sun Jul 19 17:08:09 UTC 2026 company follows, logins
+ *   8/25/26, 12:30 PM            invitations, job applications (local, US order)
+ *
+ * Everything but the last is explicitly UTC and is treated as such. The
+ * ambiguous one is read as local time, which is what LinkedIn wrote it in.
+ */
+export function parseTimestamp(value: unknown): string | null {
+  const s = clean(value);
+  if (!s) return null;
+
+  // "2026-08-23 11:01:04 UTC" / "2026/08/21 11:04:13 UTC" (and without UTC)
+  let m = s.match(
+    /^(\d{4})[-/](\d{2})[-/](\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?(?:\s*(?:UTC|Z))?$/i,
+  );
+  if (m) {
+    return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6] ?? '00'}.000Z`;
+  }
+
+  // "Sun Jul 19 17:08:09 UTC 2026"
+  const monthNames = Object.keys(MONTHS).join('|');
+  m = s.match(
+    new RegExp(
+      `^[a-z]{3},?\\s+(${monthNames})\\s+(\\d{1,2})\\s+(\\d{2}):(\\d{2}):(\\d{2})\\s+(?:UTC|GMT)\\s+(\\d{4})$`,
+      'i',
+    ),
+  );
+  if (m) {
+    const mo = MONTHS[m[1].toLowerCase()];
+    return `${m[6]}-${mo}-${m[2].padStart(2, '0')}T${m[3]}:${m[4]}:${m[5]}.000Z`;
+  }
+
+  // "8/25/26, 12:30 PM" — month first, two- or four-digit year, local time.
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4}),?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AP]M)?$/i);
+  if (m) {
+    const year = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
+    let hour = Number(m[4]);
+    const ampm = m[7]?.toUpperCase();
+    if (ampm === 'PM' && hour < 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    const d = new Date(
+      year,
+      Number(m[1]) - 1,
+      Number(m[2]),
+      hour,
+      Number(m[5]),
+      Number(m[6] ?? 0),
+    );
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+
+  // Date-only values still deserve an answer; midnight UTC is honest enough.
+  const partial = parseDate(s);
+  if (partial) {
+    const [y, mo = '01', d = '01'] = partial.split('-');
+    return `${y}-${mo}-${d}T00:00:00.000Z`;
   }
   return null;
 }
@@ -242,6 +325,62 @@ export function splitName(full: string): { first: string | null; last: string | 
 export function slugId(prefix: string, key: string): string {
   const slug = key.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
   return `${prefix}_${slug || 'unknown'}`;
+}
+
+/**
+ * Deterministic id from a record's natural key.
+ *
+ * Activity rows have no identifier of their own, and each export is a full
+ * snapshot rather than a delta — so re-importing an overlapping archive must
+ * land on the same id or every message duplicates. FNV-1a is not a security
+ * hash; it only needs to avoid collisions within one person's export.
+ */
+export function stableId(prefix: string, ...parts: (string | number | null | undefined)[]): string {
+  const input = parts.map((p) => (p === null || p === undefined ? '' : String(p))).join('');
+  let h = 0x811c9dc5;
+  for (let i = 0; i < input.length; i += 1) {
+    h ^= input.charCodeAt(i);
+    // 32-bit FNV prime multiply, spelled out because JS has no uint32 math.
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  // A second pass over the reversed input widens the space enough that a few
+  // thousand rows collide with negligible probability.
+  let g = 0x811c9dc5;
+  for (let i = input.length - 1; i >= 0; i -= 1) {
+    g ^= input.charCodeAt(i);
+    g = Math.imul(g, 0x01000193) >>> 0;
+  }
+  return `${prefix}_${h.toString(36)}${g.toString(36)}`;
+}
+
+/** Whole days between two ISO timestamps. Null when either is missing. */
+export function daysBetween(
+  from: string | null | undefined,
+  to: string | null | undefined,
+): number | null {
+  if (!from || !to) return null;
+  const a = Date.parse(from);
+  const b = Date.parse(to);
+  if (Number.isNaN(a) || Number.isNaN(b)) return null;
+  return Math.floor((b - a) / 86_400_000);
+}
+
+/** "3 days ago" / "5 months ago". Coarse on purpose. */
+export function relativeDays(days: number | null): string {
+  if (days === null) return '—';
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 30) return `${days}d ago`;
+  const months = Math.round(days / 30.44);
+  if (months < 24) return `${months}mo ago`;
+  return `${Math.round(days / 365.25)}y ago`;
+}
+
+/** "2026-08" bucket for a full ISO timestamp, used by the cadence charts. */
+export function monthBucket(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const m = iso.match(/^(\d{4})-(\d{2})/);
+  return m ? `${m[1]}-${m[2]}` : null;
 }
 
 export function newId(prefix: string): string {

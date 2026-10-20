@@ -68,7 +68,7 @@ export default function CompanyPage() {
         <PageHeader title="Company not found" />
         <div className="p-6">
           <Empty>
-            No company with id <code className="font-mono">{id}</code>.{' '}
+            No company with id <code>{id}</code>.{' '}
             <Link href="/companies" className="link">
               Back to companies
             </Link>
@@ -120,22 +120,22 @@ export default function CompanyPage() {
                   <div className="flex flex-wrap items-center gap-1.5">
                     {[...hierarchy.ancestors].reverse().map((a, i) => (
                       <span key={a.id} className="flex items-center gap-1.5">
-                        {i > 0 ? <span className="text-slate-600">›</span> : null}
+                        {i > 0 ? <span className="text-fg-faint">›</span> : null}
                         <Link
                           href={`/companies/${encodeURIComponent(a.id)}`}
-                          className="chip hover:border-accent/50 hover:text-accent-soft"
+                          className="chip hover:border-brand/50 hover:text-brand-dark"
                         >
                           {a.name}
                         </Link>
                       </span>
                     ))}
-                    <span className="text-slate-600">›</span>
-                    <span className="chip border-accent/40 bg-accent/10 text-accent-soft">
+                    <span className="text-fg-faint">›</span>
+                    <span className="chip border-brand/40 bg-brand/10 text-brand-dark">
                       {company.name}
                     </span>
                   </div>
                   {company.relationToParent ? (
-                    <div className="mt-1 font-mono text-[10px] text-slate-600">
+                    <div className="mt-1 text-[10px] text-fg-faint">
                       relation: {company.relationToParent}
                     </div>
                   ) : null}
@@ -143,7 +143,7 @@ export default function CompanyPage() {
               ) : null}
 
               {hierarchy.children.length > 0 ? (
-                <div className={hierarchy.ancestors.length > 0 ? 'border-t border-ink-800 pt-2' : ''}>
+                <div className={hierarchy.ancestors.length > 0 ? 'border-t border-line pt-2' : ''}>
                   <span className="label mb-1 block">Contains ({hierarchy.children.length})</span>
                   <ul className="flex flex-wrap gap-1.5">
                     {hierarchy.children.map((c) => {
@@ -154,14 +154,14 @@ export default function CompanyPage() {
                         <li key={c.id}>
                           <Link
                             href={`/companies/${encodeURIComponent(c.id)}`}
-                            className="chip hover:border-accent/50 hover:text-accent-soft"
+                            className="chip hover:border-brand/50 hover:text-brand-dark"
                           >
                             {c.name}
                             {n > 0 ? (
-                              <span className="font-mono text-[10px] text-slate-500">{n}</span>
+                              <span className="text-[10px] text-fg-subtle">{n}</span>
                             ) : null}
                             {c.relationToParent ? (
-                              <span className="font-mono text-[10px] text-slate-600">
+                              <span className="text-[10px] text-fg-faint">
                                 {c.relationToParent}
                               </span>
                             ) : null}
@@ -173,8 +173,8 @@ export default function CompanyPage() {
                 </div>
               ) : null}
 
-              <div className="border-t border-ink-800 pt-2">
-                <Link href="/companies/resolve" className="text-xs text-slate-500 hover:text-slate-300">
+              <div className="border-t border-line pt-2">
+                <Link href="/companies/resolve" className="text-xs text-fg-subtle hover:text-fg-muted">
                   review or revert these relationships →
                 </Link>
               </div>
@@ -223,9 +223,9 @@ export default function CompanyPage() {
             <ul className="flex flex-wrap gap-2">
               {topSchools.map((r) => (
                 <li key={r.sid}>
-                  <Link href={`/schools/${encodeURIComponent(r.sid)}`} className="chip hover:border-accent/50">
+                  <Link href={`/schools/${encodeURIComponent(r.sid)}`} className="chip hover:border-brand/50">
                     {r.school!.name}
-                    <span className="font-mono text-[10px] text-slate-500">{r.count}</span>
+                    <span className="text-[10px] text-fg-subtle">{r.count}</span>
                   </Link>
                 </li>
               ))}
@@ -234,14 +234,14 @@ export default function CompanyPage() {
         ) : null}
 
         <Section title="Provenance">
-          <ul className="space-y-1 text-xs text-slate-400">
+          <ul className="space-y-1 text-xs text-fg-muted">
             {company.sourceBatchIds.map((bid) => {
               const batch = db.batches.find((b) => b.id === bid);
               return (
                 <li key={bid}>
                   {batch?.label ?? bid}
                   {batch ? (
-                    <span className="font-mono text-[10px] text-slate-600">
+                    <span className="text-[10px] text-fg-faint">
                       {' '}
                       · {new Date(batch.importedAt).toLocaleDateString()}
                     </span>
@@ -250,7 +250,7 @@ export default function CompanyPage() {
               );
             })}
           </ul>
-          <div className="mt-2 font-mono text-[10px] text-slate-600">
+          <div className="mt-2 text-[10px] text-fg-faint">
             first seen {new Date(company.firstSeenAt).toLocaleString()} · last updated{' '}
             {new Date(company.lastUpdatedAt).toLocaleString()}
           </div>

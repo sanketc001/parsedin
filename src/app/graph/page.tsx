@@ -66,8 +66,8 @@ export default function GraphPage() {
         }
       />
 
-      <div className="flex h-[calc(100vh-73px)]">
-        <div className="w-60 shrink-0 space-y-4 overflow-y-auto border-r border-ink-700 p-3">
+      <div className="flex h-[calc(100vh-var(--chrome-h))]">
+        <div className="w-60 shrink-0 space-y-4 overflow-y-auto border-r border-line p-3">
           <div>
             <label className="label mb-1 block">
               Hub threshold: {opts.minDegree}+ people
@@ -78,9 +78,9 @@ export default function GraphPage() {
               max={8}
               value={opts.minDegree}
               onChange={(e) => setOpts({ ...opts, minDegree: Number(e.target.value) })}
-              className="w-full accent-accent"
+              className="w-full accent-brand"
             />
-            <p className="mt-1 text-[11px] text-slate-500">
+            <p className="mt-1 text-[11px] text-fg-subtle">
               Companies and schools appear only when this many people share them.
             </p>
           </div>
@@ -94,11 +94,11 @@ export default function GraphPage() {
               step={50}
               value={opts.maxPeople}
               onChange={(e) => setOpts({ ...opts, maxPeople: Number(e.target.value) })}
-              className="w-full accent-accent"
+              className="w-full accent-brand"
             />
           </div>
 
-          <div className="space-y-1.5 border-t border-ink-800 pt-3">
+          <div className="space-y-1.5 border-t border-line pt-3">
             {(
               [
                 ['includeCompanies', 'Companies'],
@@ -107,10 +107,10 @@ export default function GraphPage() {
                 ['includeSelf', 'Link to you'],
               ] as [keyof GraphOptions, string][]
             ).map(([key, label]) => (
-              <label key={key} className="flex items-center gap-2 text-xs text-slate-300">
+              <label key={key} className="flex items-center gap-2 text-xs text-fg-muted">
                 <input
                   type="checkbox"
-                  className="accent-accent"
+                  className="accent-brand"
                   checked={Boolean(opts[key])}
                   onChange={(e) => setOpts({ ...opts, [key]: e.target.checked })}
                 />
@@ -119,10 +119,10 @@ export default function GraphPage() {
             ))}
           </div>
 
-          <div className="border-t border-ink-800 pt-3 font-mono text-[10px] text-slate-500">
+          <div className="border-t border-line pt-3 text-[10px] text-fg-subtle">
             <div>{people.length.toLocaleString()} people matched</div>
             {truncated ? (
-              <div className="text-amber-500/80">
+              <div className="text-warn">
                 showing first {opts.maxPeople} — raise the cap to see more
               </div>
             ) : null}
@@ -135,9 +135,9 @@ export default function GraphPage() {
           </div>
 
           {selected ? (
-            <div className="border-t border-ink-800 pt-3">
+            <div className="border-t border-line pt-3">
               <div className="label mb-1">{selected.kind}</div>
-              <div className="text-sm text-slate-100">{selected.label}</div>
+              <div className="text-sm text-fg">{selected.label}</div>
               <NodeLink node={selected} />
               <div className="label mt-3 mb-1">Connected ({neighbours.length})</div>
               <ul className="space-y-0.5">
@@ -149,7 +149,7 @@ export default function GraphPage() {
               </ul>
             </div>
           ) : (
-            <p className="border-t border-ink-800 pt-3 text-[11px] text-slate-500">
+            <p className="border-t border-line pt-3 text-[11px] text-fg-subtle">
               Click a node to inspect it and dim everything more than one hop away.
             </p>
           )}
@@ -187,9 +187,9 @@ function NodeLink({ node, compact }: { node: GraphNode; compact?: boolean }) {
         : node.kind === 'school'
           ? `/schools/${encodeURIComponent(node.entityId)}`
           : null;
-  if (!href) return compact ? <span className="text-slate-400">{node.label}</span> : null;
+  if (!href) return compact ? <span className="text-fg-muted">{node.label}</span> : null;
   return (
-    <Link href={href} className={compact ? 'text-slate-400 hover:text-accent-soft' : 'link text-xs'}>
+    <Link href={href} className={compact ? 'text-fg-muted hover:text-brand-dark' : 'link text-xs'}>
       {compact ? node.label : 'open →'}
     </Link>
   );

@@ -86,10 +86,10 @@ export default function ResolvePage() {
         subtitle="Merge name variants and record corporate structure"
         actions={
           <>
-            <label className="flex items-center gap-1.5 text-xs text-slate-400">
+            <label className="flex items-center gap-1.5 text-xs text-fg-muted">
               <input
                 type="checkbox"
-                className="accent-accent"
+                className="accent-brand"
                 checked={dryRun}
                 onChange={(e) => setDryRun(e.target.checked)}
               />
@@ -127,15 +127,15 @@ export default function ResolvePage() {
         </div>
 
         {error ? (
-          <div className="rounded border border-red-900/60 bg-red-950/30 p-3 text-sm text-red-300">
+          <div className="rounded border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
             {error}
           </div>
         ) : null}
 
         {report ? (
           <Section title="Last run">
-            <div className="space-y-1 text-sm text-slate-300">
-              <div className="text-xs text-slate-500">
+            <div className="space-y-1 text-sm text-fg-muted">
+              <div className="text-xs text-fg-subtle">
                 {report.clustersExamined} of {report.clustersTotal} name clusters examined ·
                 grounding: {report.provider}
               </div>
@@ -159,9 +159,9 @@ export default function ResolvePage() {
                   </ul>
                 </div>
               ) : null}
-              <div className="text-xs text-slate-400">{report.queued} queued for review</div>
+              <div className="text-xs text-fg-muted">{report.queued} queued for review</div>
               {report.errors.length > 0 ? (
-                <ul className="space-y-0.5 text-xs text-amber-500/90">
+                <ul className="space-y-0.5 text-xs text-warn">
                   {report.errors.slice(0, 6).map((e, i) => (
                     <li key={i}>· {e}</li>
                   ))}
@@ -212,7 +212,7 @@ export default function ResolvePage() {
 
         {rejected.length > 0 ? (
           <Section title="Rejected" count={rejected.length}>
-            <ul className="space-y-0.5 text-xs text-slate-500">
+            <ul className="space-y-0.5 text-xs text-fg-subtle">
               {rejected.map((p) => (
                 <li key={p.id}>
                   {p.names[0]} {p.kind === 'merge' ? '≠' : '⇸'} {p.names[1]}
@@ -223,15 +223,15 @@ export default function ResolvePage() {
         ) : null}
 
         <Section title="How this works">
-          <div className="space-y-2 text-sm text-slate-400">
+          <div className="space-y-2 text-sm text-fg-muted">
             <p>
-              <span className="text-slate-200">Merging</span> is for one company written two
+              <span className="text-fg">Merging</span> is for one company written two
               ways — a typo or a legal suffix. It rewrites everyone&apos;s references and is
               destructive, so it needs either web evidence or names close enough that the
               spelling itself proves it.
             </p>
             <p>
-              <span className="text-slate-200">Parent links</span> are for genuinely different
+              <span className="text-fg">Parent links</span> are for genuinely different
               workplaces in one corporate group. Nothing is rewritten:
               &quot;who works at JioHotstar&quot; still answers precisely, while the group rolls
               up. Subsidiaries are never merged, however similar the names look.
@@ -264,47 +264,47 @@ function ProposalRow({
 }) {
   const isMerge = proposal.kind === 'merge';
   return (
-    <li className="rounded border border-ink-800 bg-ink-850 p-3">
+    <li className="rounded border border-line bg-surface-sunken p-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span
               className={`chip ${
                 isMerge
-                  ? 'border-amber-800/60 bg-amber-950/40 text-amber-300'
-                  : 'border-accent/40 bg-accent/10 text-accent-soft'
+                  ? 'border-warn/30 bg-warn/10 text-warn'
+                  : 'border-brand/40 bg-brand/10 text-brand-dark'
               }`}
             >
               {isMerge ? 'merge' : `parent · ${proposal.relation}`}
             </span>
-            <span className="font-mono text-[11px] text-slate-500">
+            <span className="font-mono text-[11px] text-fg-subtle">
               confidence {proposal.confidence.toFixed(2)}
             </span>
           </div>
 
-          <div className="mt-1.5 text-sm text-slate-100">
+          <div className="mt-1.5 text-sm text-fg">
             {isMerge ? (
               <>
                 <span>{proposal.names[0]}</span>
-                <span className="mx-2 text-slate-500">is the same as</span>
+                <span className="mx-2 text-fg-subtle">is the same as</span>
                 <span>{proposal.names[1]}</span>
               </>
             ) : (
               <>
                 <span>{proposal.names[0]}</span>
-                <span className="mx-2 text-slate-500">sits under</span>
+                <span className="mx-2 text-fg-subtle">sits under</span>
                 <span>{proposal.names[1]}</span>
               </>
             )}
           </div>
 
-          <div className="mt-0.5 text-xs text-slate-500">
+          <div className="mt-0.5 text-xs text-fg-subtle">
             {isMerge
               ? `${headcount(proposal.companyIds[0])} people would move`
               : 'nothing is rewritten — this only records structure'}
           </div>
 
-          <p className="mt-1.5 text-xs text-slate-400">{proposal.reasoning}</p>
+          <p className="mt-1.5 text-xs text-fg-muted">{proposal.reasoning}</p>
           <EvidenceList evidence={proposal.evidence} />
         </div>
 
@@ -337,16 +337,16 @@ function LogRow({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <li className="rounded border border-ink-800 px-3 py-2">
+    <li className="rounded border border-line px-3 py-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="truncate text-sm text-slate-200">{entry.description}</span>
+            <span className="truncate text-sm text-fg">{entry.description}</span>
             {entry.auto ? (
               <span className="chip font-mono text-[10px]">auto</span>
             ) : null}
           </div>
-          <div className="font-mono text-[10px] text-slate-600">
+          <div className="font-mono text-[10px] text-fg-faint">
             {new Date(entry.appliedAt).toLocaleString()}
             {entry.confidence !== null ? ` · confidence ${entry.confidence.toFixed(2)}` : ''}
             {entry.kind === 'merge' && entry.rewrittenCurrent
@@ -358,13 +358,13 @@ function LogRow({
           {entry.evidence.length > 0 ? (
             <button
               type="button"
-              className="text-[11px] text-slate-500 hover:text-slate-300"
+              className="text-[11px] text-fg-subtle hover:text-fg-muted"
               onClick={() => setOpen((v) => !v)}
             >
               {open ? 'hide source' : 'source'}
             </button>
           ) : (
-            <span className="text-[11px] text-slate-600">no citation</span>
+            <span className="text-[11px] text-fg-faint">no citation</span>
           )}
           <button
             type="button"
@@ -384,7 +384,7 @@ function LogRow({
 function EvidenceList({ evidence }: { evidence: Evidence[] }) {
   if (evidence.length === 0) {
     return (
-      <div className="mt-1.5 text-[11px] text-slate-600">
+      <div className="mt-1.5 text-[11px] text-fg-faint">
         No web source — judged from the names alone.
       </div>
     );
@@ -392,7 +392,7 @@ function EvidenceList({ evidence }: { evidence: Evidence[] }) {
   return (
     <ul className="mt-1.5 space-y-1">
       {evidence.map((e) => (
-        <li key={e.url} className="rounded border border-ink-800 bg-ink-900 p-2">
+        <li key={e.url} className="rounded border border-line bg-surface p-2">
           <a
             href={e.url}
             target="_blank"
@@ -401,7 +401,7 @@ function EvidenceList({ evidence }: { evidence: Evidence[] }) {
           >
             {e.title} ↗
           </a>
-          <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">
+          <p className="mt-0.5 text-[11px] leading-relaxed text-fg-subtle">
             {e.snippet.slice(0, 280)}
             {e.snippet.length > 280 ? '…' : ''}
           </p>

@@ -6,21 +6,83 @@
 // browser bundle.
 // ---------------------------------------------------------------------------
 
-/** LinkedIn archive files the importer recognizes. */
-export const SUPPORTED_FILES = [
-  'Connections.csv',
-  'Profile.csv',
-  'Email Addresses.csv',
-  'Positions.csv',
-  'Education.csv',
-  'Skills.csv',
-  'Certifications.csv',
-  'Volunteering.csv',
-  'Languages.csv',
-  'Projects.csv',
-  'Honors.csv',
-  'Invitations.csv',
+/**
+ * LinkedIn archive files the importer recognizes, grouped the way the export
+ * itself splits: your profile, your network, and everything you did.
+ *
+ * The activity group is only present in the *Complete* export — LinkedIn's
+ * "Basic" download omits messages, ads and security history entirely.
+ */
+export const SUPPORTED_GROUPS: { title: string; note: string; files: string[] }[] = [
+  {
+    title: 'Your profile',
+    note: 'Full history for the account owner.',
+    files: [
+      'Profile.csv',
+      'Email Addresses.csv',
+      'Positions.csv',
+      'Education.csv',
+      'Skills.csv',
+      'Certifications.csv',
+      'Volunteering.csv',
+      'Languages.csv',
+      'Projects.csv',
+      'Honors.csv',
+      'Verifications.csv',
+    ],
+  },
+  {
+    title: 'Your network',
+    note: 'One person per row — name, current role, profile URL.',
+    files: [
+      'Connections.csv',
+      'Invitations.csv',
+      'Endorsement_Received_Info.csv',
+      'Endorsement_Given_Info.csv',
+      'Member_Follows.csv',
+      'Notes.csv',
+    ],
+  },
+  {
+    title: 'Your activity',
+    note: 'Complete export only. This is what turns the contact list into a record of relationships.',
+    files: [
+      'messages.csv',
+      'Shares.csv',
+      'Comments.csv',
+      'Reactions.csv',
+      'Votes.csv',
+      'Company Follows.csv',
+      'Learning.csv',
+      'Events.csv',
+    ],
+  },
+  {
+    title: 'Job search',
+    note: 'Cross-referenced against the network on the Jobs page.',
+    files: [
+      'Jobs/Job Applications.csv',
+      'Jobs/Saved Jobs.csv',
+      'Jobs/Job Seeker Preferences.csv',
+      'SavedJobAlerts.csv',
+    ],
+  },
+  {
+    title: 'Ads & security',
+    note: 'What LinkedIn inferred about you, and who signed in.',
+    files: [
+      'Ad_Targeting.csv',
+      'Inferences_about_you.csv',
+      'Ads Clicked.csv',
+      'LAN Ads Engagement.csv',
+      'Logins.csv',
+      'Security Challenges.csv',
+    ],
+  },
 ];
+
+/** Flat list, for the "recognized files" summary. */
+export const SUPPORTED_FILES = SUPPORTED_GROUPS.flatMap((g) => g.files);
 
 /** The shape the enriched-profile importer accepts, shown as a live example. */
 export const ENRICHED_TEMPLATE = {

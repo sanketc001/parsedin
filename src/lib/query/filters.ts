@@ -37,7 +37,27 @@ export interface Filters {
   /** Minimum private relationship strength, 1..5. */
   minStrength: number | null;
   hasNotes: boolean;
+  /**
+   * Whether you have actually interacted with this person.
+   * 'any' disables the facet; the rest partition the network by evidence.
+   */
+  contact: ContactFilter;
 }
+
+export type ContactFilter =
+  | 'any'
+  | 'messaged'
+  | 'never-messaged'
+  | 'two-way'
+  | 'awaiting-reply';
+
+export const CONTACT_FILTERS: { value: ContactFilter; label: string }[] = [
+  { value: 'any', label: 'anyone' },
+  { value: 'messaged', label: 'messaged' },
+  { value: 'never-messaged', label: 'never messaged' },
+  { value: 'two-way', label: 'two-way' },
+  { value: 'awaiting-reply', label: 'owes a reply' },
+];
 
 export function emptyFilters(): Filters {
   return {
@@ -55,6 +75,7 @@ export function emptyFilters(): Filters {
     degrees: [],
     minStrength: null,
     hasNotes: false,
+    contact: 'any',
   };
 }
 
@@ -73,7 +94,8 @@ export function isEmptyFilters(f: Filters): boolean {
     f.volunteering.length === 0 &&
     f.degrees.length === 0 &&
     f.minStrength === null &&
-    !f.hasNotes
+    !f.hasNotes &&
+    f.contact === 'any'
   );
 }
 
@@ -93,6 +115,7 @@ export function countActiveFilters(f: Filters): number {
   n += f.degrees.length;
   if (f.minStrength !== null) n += 1;
   if (f.hasNotes) n += 1;
+  if (f.contact !== 'any') n += 1;
   return n;
 }
 
@@ -159,6 +182,14 @@ export function matchPerson(person: Person, f: Filters, idx: Indexes): boolean {
   }
 
   if (f.hasNotes && !(idx.noteCountByPerson.get(person.id) ?? 0)) return false;
+
+  if (f.contact !== 'any') {
+    const c = idx.contactByPerson.get(person.id);
+    if (f.contact === 'messaged' && !(c && c.messages > 0)) return false;
+    if (f.contact === 'never-messaged' && c && c.messages > 0) return false;
+    if (f.contact === 'two-way' && !c?.reciprocal) return false;
+    if (f.contact === 'awaiting-reply' && !c?.awaitingYourReply) return false;
+  }
 
   return true;
 }
@@ -258,6 +289,8 @@ export type SortKey =
   | 'recently-connected'
   | 'recently-updated'
   | 'strength'
+  | 'contact'
+  | 'last-contact'
   | 'detail';
 
 export function sortPeople(people: Person[], key: SortKey, idx: Indexes): Person[] {
@@ -281,6 +314,24 @@ export function sortPeople(people: Person[], key: SortKey, idx: Indexes): Person
         (a, b) =>
           (idx.strengthByPerson.get(b.id) ?? 0) - (idx.strengthByPerson.get(a.id) ?? 0) ||
           a.fullName.localeCompare(b.fullName),
+      );
+      break;
+    case 'contact':
+      // Strongest measured relationships first — the opposite of alphabetical,
+      // and the order you actually want when scanning for who to talk to.
+      out.sort(
+        (a, b) =>
+          (idx.contactByPerson.get(b.id)?.signal ?? 0) -
+            (idx.contactByPerson.get(a.id)?.signal ?? 0) ||
+          a.fullName.localeCompare(b.fullName),
+      );
+      break;
+    case 'last-contact':
+      out.sort(
+        (a, b) =>
+          (idx.contactByPerson.get(b.id)?.lastAt ?? '').localeCompare(
+            idx.contactByPerson.get(a.id)?.lastAt ?? '',
+          ) || a.fullName.localeCompare(b.fullName),
       );
       break;
     case 'detail':

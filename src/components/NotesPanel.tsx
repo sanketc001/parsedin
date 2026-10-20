@@ -37,7 +37,7 @@ export function NotesPanel({ personId }: { personId: string }) {
           onChange={(e) => setDraft(e.target.value)}
         />
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] text-slate-600">stored locally only</span>
+          <span className="text-[11px] text-fg-faint">stored locally only</span>
           <button
             type="button"
             className="btn btn-primary"
@@ -53,14 +53,14 @@ export function NotesPanel({ personId }: { personId: string }) {
           </button>
         </div>
 
-        {error ? <div className="text-xs text-red-400">{error}</div> : null}
+        {error ? <div className="text-xs text-danger">{error}</div> : null}
 
-        <ul className="space-y-2 border-t border-ink-800 pt-2">
+        <ul className="space-y-2 border-t border-line pt-2">
           {notes.length === 0 ? (
-            <li className="text-xs text-slate-600">No notes yet.</li>
+            <li className="text-xs text-fg-faint">No notes yet.</li>
           ) : (
             notes.map((note) => (
-              <li key={note.id} className="rounded border border-ink-800 bg-ink-850 p-2">
+              <li key={note.id} className="rounded border border-line bg-surface-sunken p-2">
                 {editingId === note.id ? (
                   <>
                     <textarea
@@ -93,16 +93,16 @@ export function NotesPanel({ personId }: { personId: string }) {
                   </>
                 ) : (
                   <>
-                    <p className="whitespace-pre-line text-xs text-slate-300">{note.body}</p>
+                    <p className="whitespace-pre-line text-xs text-fg-muted">{note.body}</p>
                     <div className="mt-1 flex items-center justify-between gap-2">
-                      <span className="font-mono text-[10px] text-slate-600">
+                      <span className="text-[10px] text-fg-faint">
                         {new Date(note.createdAt).toLocaleString()}
                         {note.updatedAt !== note.createdAt ? ' · edited' : ''}
                       </span>
                       <span className="flex gap-2">
                         <button
                           type="button"
-                          className="text-[11px] text-slate-500 hover:text-slate-300"
+                          className="text-[11px] text-fg-subtle hover:text-fg-muted"
                           onClick={() => {
                             setEditingId(note.id);
                             setEditDraft(note.body);
@@ -112,7 +112,7 @@ export function NotesPanel({ personId }: { personId: string }) {
                         </button>
                         <button
                           type="button"
-                          className="text-[11px] text-slate-500 hover:text-red-400"
+                          className="text-[11px] text-fg-subtle hover:text-danger"
                           disabled={busy}
                           onClick={() => void run(() => deleteNote(personId, note.id))}
                         >

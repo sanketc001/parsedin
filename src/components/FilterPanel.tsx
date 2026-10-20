@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { FacetOption, Facets, Filters } from '@/lib/query/filters';
-import { countActiveFilters } from '@/lib/query/filters';
+import { CONTACT_FILTERS, countActiveFilters } from '@/lib/query/filters';
 
 // ---------------------------------------------------------------------------
 // Facet sidebar. Values within a group are OR'd, groups are AND'd — stated in
@@ -35,13 +35,13 @@ export function FilterPanel({ filters, facets, onChange, onReset }: Props) {
   };
 
   return (
-    <div className="w-64 shrink-0 space-y-3 overflow-y-auto border-r border-ink-700 p-3">
+    <div className="w-64 shrink-0 space-y-3 overflow-y-auto border-r border-line p-3">
       <div className="flex items-center justify-between">
         <span className="label">
           Filters{active > 0 ? ` · ${active}` : ''}
         </span>
         {active > 0 ? (
-          <button type="button" onClick={onReset} className="text-xs text-slate-500 hover:text-slate-300">
+          <button type="button" onClick={onReset} className="text-xs text-fg-subtle hover:text-fg-muted">
             clear all
           </button>
         ) : null}
@@ -106,7 +106,7 @@ export function FilterPanel({ filters, facets, onChange, onReset }: Props) {
         onToggle={(v) => toggle('industries', v)}
       />
 
-      <div className="border-t border-ink-800 pt-3">
+      <div className="border-t border-line pt-3">
         <span className="label mb-1 block">Connection degree</span>
         <div className="flex flex-wrap gap-1">
           {facets.degrees.map((d) => {
@@ -117,35 +117,55 @@ export function FilterPanel({ filters, facets, onChange, onReset }: Props) {
                 key={d.value}
                 type="button"
                 onClick={() => toggleDegree(n)}
-                className={`chip ${on ? 'border-accent/60 bg-accent/15 text-accent-soft' : ''}`}
+                className={`chip ${on ? 'border-brand/60 bg-brand/15 text-brand-dark' : ''}`}
               >
                 {d.label}
-                <span className="font-mono text-[10px] text-slate-500">{d.count}</span>
+                <span className="text-[10px] text-fg-subtle">{d.count}</span>
               </button>
             );
           })}
           {facets.degrees.length === 0 ? (
-            <span className="text-xs text-slate-600">not recorded</span>
+            <span className="text-xs text-fg-faint">not recorded</span>
           ) : null}
         </div>
       </div>
 
-      <div className="border-t border-ink-800 pt-3">
+      <div className="border-t border-line pt-3">
+        <span className="label mb-1 block">Contact</span>
+        <div className="flex flex-wrap gap-1">
+          {CONTACT_FILTERS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onChange({ ...filters, contact: option.value })}
+              className={`chip transition-colors ${
+                filters.contact === option.value
+                  ? 'border-brand/50 bg-brand/15 text-brand-dark'
+                  : 'hover:border-line-strong'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="border-t border-line pt-3">
         <span className="label mb-1 block">Private signals</span>
         <div className="space-y-1.5">
-          <label className="flex items-center gap-2 text-xs text-slate-300">
+          <label className="flex items-center gap-2 text-xs text-fg-muted">
             <input
               type="checkbox"
-              className="accent-accent"
+              className="accent-brand"
               checked={filters.hasNotes}
               onChange={(e) => onChange({ ...filters, hasNotes: e.target.checked })}
             />
             has notes
           </label>
-          <div className="flex items-center gap-2 text-xs text-slate-300">
+          <div className="flex items-center gap-2 text-xs text-fg-muted">
             <span>min strength</span>
             <select
-              className="rounded border border-ink-600 bg-ink-850 px-1.5 py-0.5 text-xs"
+              className="rounded border border-line-strong bg-surface-sunken px-1.5 py-0.5 text-xs"
               value={filters.minStrength ?? ''}
               onChange={(e) =>
                 onChange({
@@ -200,10 +220,10 @@ function FacetGroup({
   if (options.length === 0) return null;
 
   return (
-    <div className="border-t border-ink-800 pt-3">
+    <div className="border-t border-line pt-3">
       <div className="mb-1 flex items-center justify-between">
         <span className="label">{title}</span>
-        <span className="font-mono text-[10px] text-slate-600">{options.length}</span>
+        <span className="text-[10px] text-fg-faint">{options.length}</span>
       </div>
 
       {options.length > COLLAPSED_LIMIT ? (
@@ -221,19 +241,19 @@ function FacetGroup({
           return (
             <label
               key={o.value}
-              className={`flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-xs hover:bg-ink-800 ${
-                on ? 'text-accent-soft' : 'text-slate-400'
+              className={`flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-xs hover:bg-surface-sunken ${
+                on ? 'text-brand-dark' : 'text-fg-muted'
               }`}
               title={o.label}
             >
               <input
                 type="checkbox"
-                className="accent-accent"
+                className="accent-brand"
                 checked={on}
                 onChange={() => onToggle(o.value)}
               />
               <span className="min-w-0 flex-1 truncate">{o.label}</span>
-              <span className="shrink-0 font-mono text-[10px] text-slate-600">{o.count}</span>
+              <span className="shrink-0 text-[10px] text-fg-faint">{o.count}</span>
             </label>
           );
         })}
@@ -243,7 +263,7 @@ function FacetGroup({
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-1 text-[11px] text-slate-500 hover:text-slate-300"
+          className="mt-1 text-[11px] text-fg-subtle hover:text-fg-muted"
         >
           {expanded ? 'show less' : `show all ${filtered.total}`}
         </button>

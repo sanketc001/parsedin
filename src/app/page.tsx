@@ -5,18 +5,48 @@ import { useMemo } from 'react';
 import { useData } from '@/components/DataProvider';
 import { Empty, PageHeader, Section, Stat } from '@/components/ui';
 import { runAggregation } from '@/lib/query/aggregate';
+import { buildReconnectList } from '@/lib/contact';
 
 export default function OverviewPage() {
   const { db, idx, loading } = useData();
 
   const stats = useMemo(() => {
-    const withHistory = db.people.filter((p) => p.positions.length > 1).length;
-    const withEducation = db.people.filter((p) => p.education.length > 0).length;
     const direct = db.people.filter((p) => p.connectionDegree === 1).length;
-    const rated = db.relationships.length;
-    const noted = new Set(db.notes.map((n) => n.personId)).size;
-    return { withHistory, withEducation, direct, rated, noted };
+    let messages = 0;
+    let threads = 0;
+    for (const c of db.activity.conversations) {
+      // Sponsored InMail is advertising; counting it as correspondence would
+      // flatter the numbers on every page that shows them.
+      if (c.sponsored) continue;
+      messages += c.messages.length;
+      threads += 1;
+    }
+    return { direct, messages, threads };
   }, [db]);
+
+  /**
+   * The headline finding: how much of the network you have ever spoken to.
+   * Almost every LinkedIn graph is mostly strangers, and saying so up front is
+   * more honest than a connection count.
+   */
+  const reach = useMemo(() => {
+    // Messages only. An invitation or an endorsement is contact of a sort, and
+    // the contact index counts both — but neither is having spoken to someone.
+    const spoken = [...idx.contactByPerson.values()].filter((s) => s.messages > 0).length;
+    const direct = db.people.filter((p) => p.connectionDegree === 1).length;
+    return {
+      spoken,
+      share: direct > 0 ? Math.round((spoken / direct) * 100) : 0,
+    };
+  }, [db.people, idx.contactByPerson]);
+
+  const needsReply = useMemo(
+    () =>
+      buildReconnectList(db, idx.contactByPerson, idx.personById).filter(
+        (i) => i.reason === 'awaiting-your-reply',
+      ),
+    [db, idx],
+  );
 
   const topCompanies = useMemo(
     () => runAggregation(db.people, { kind: 'companies', scope: 'current', limit: 8 }, idx),
@@ -57,8 +87,8 @@ export default function OverviewPage() {
       <div className="space-y-4 p-6">
         {empty ? (
           <div className="card p-8 text-center">
-            <h2 className="text-base font-semibold text-slate-100">Nothing imported yet</h2>
-            <p className="mx-auto mt-2 max-w-lg text-sm text-slate-400">
+            <h2 className="text-base font-semibold text-fg">Nothing imported yet</h2>
+            <p className="mx-auto mt-2 max-w-lg text-sm text-fg-muted">
               Import your LinkedIn data export to build the graph, or load a synthetic
               sample network to see how everything works first.
             </p>
@@ -81,12 +111,58 @@ export default function OverviewPage() {
           <Stat label="Companies" value={db.companies.length} href="/companies" />
           <Stat label="Schools" value={db.schools.length} href="/schools" />
           <Stat
-            label="Deep profiles"
-            value={stats.withHistory}
-            hint="more than one role on record"
+            label="Ever spoken to"
+            value={reach.spoken}
+            hint={`${reach.share}% of your connections`}
+            href="/reconnect"
           />
-          <Stat label="Rated / noted" value={`${stats.rated} / ${stats.noted}`} hint="private" />
+          <Stat
+            label="Messages"
+            value={stats.messages}
+            hint={`${stats.threads} threads`}
+            href="/inbox"
+          />
         </div>
+
+        {needsReply.length > 0 ? (
+          <Section
+            title="Waiting on you"
+            count={needsReply.length}
+            aside={
+              <Link href="/reconnect" className="text-xs text-fg-subtle hover:text-fg-muted">
+                all of them →
+              </Link>
+            }
+          >
+            <p className="mb-2 text-xs text-fg-subtle">
+              The last message in these threads is theirs.
+            </p>
+            <ul className="divide-y divide-line">
+              {needsReply.slice(0, 5).map((item) => (
+                <li key={item.person.id}>
+                  <Link
+                    href={`/people/${encodeURIComponent(item.person.id)}`}
+                    className="flex items-center justify-between gap-3 px-1 py-2 hover:bg-surface-sunken"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm text-fg">
+                        {item.person.fullName}
+                      </span>
+                      <span className="block truncate text-xs text-fg-subtle">
+                        {[item.person.currentTitle, item.person.currentCompany]
+                          .filter(Boolean)
+                          .join(' · ') || item.person.headline}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-[10px] text-warn">
+                      {item.detail}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Section>
+        ) : null}
 
         <div className="grid gap-4 lg:grid-cols-3">
           <Section title="Top companies" count={topCompanies.length}>
@@ -118,7 +194,7 @@ export default function OverviewPage() {
           <Section
             title="Recently updated people"
             aside={
-              <Link href="/people" className="text-xs text-slate-500 hover:text-slate-300">
+              <Link href="/people" className="text-xs text-fg-subtle hover:text-fg-muted">
                 all people →
               </Link>
             }
@@ -126,20 +202,20 @@ export default function OverviewPage() {
             {recentlyUpdated.length === 0 ? (
               <Empty>Nothing yet.</Empty>
             ) : (
-              <ul className="divide-y divide-ink-800">
+              <ul className="divide-y divide-line">
                 {recentlyUpdated.map((p) => (
                   <li key={p.id}>
                     <Link
                       href={`/people/${encodeURIComponent(p.id)}`}
-                      className="flex items-center justify-between gap-3 px-1 py-2 hover:bg-ink-850"
+                      className="flex items-center justify-between gap-3 px-1 py-2 hover:bg-surface-sunken"
                     >
                       <span className="min-w-0">
-                        <span className="block truncate text-sm text-slate-200">{p.fullName}</span>
-                        <span className="block truncate text-xs text-slate-500">
+                        <span className="block truncate text-sm text-fg">{p.fullName}</span>
+                        <span className="block truncate text-xs text-fg-subtle">
                           {[p.currentTitle, p.currentCompany].filter(Boolean).join(' · ') || '—'}
                         </span>
                       </span>
-                      <span className="shrink-0 font-mono text-[10px] text-slate-600">
+                      <span className="shrink-0 text-[10px] text-fg-faint">
                         {new Date(p.lastUpdatedAt).toLocaleDateString()}
                       </span>
                     </Link>
@@ -153,7 +229,7 @@ export default function OverviewPage() {
             title="Imports"
             count={db.batches.length}
             aside={
-              <Link href="/sources" className="text-xs text-slate-500 hover:text-slate-300">
+              <Link href="/sources" className="text-xs text-fg-subtle hover:text-fg-muted">
                 provenance →
               </Link>
             }
@@ -161,16 +237,16 @@ export default function OverviewPage() {
             {db.batches.length === 0 ? (
               <Empty>No imports recorded.</Empty>
             ) : (
-              <ul className="divide-y divide-ink-800">
+              <ul className="divide-y divide-line">
                 {db.batches.slice(0, 6).map((b) => (
                   <li key={b.id} className="flex items-center justify-between gap-3 px-1 py-2">
                     <span className="min-w-0">
-                      <span className="block truncate text-sm text-slate-200">{b.label}</span>
-                      <span className="block truncate font-mono text-[10px] text-slate-500">
+                      <span className="block truncate text-sm text-fg">{b.label}</span>
+                      <span className="block truncate text-[10px] text-fg-subtle">
                         {b.kind} · +{b.stats.peopleCreated} new · {b.files.length} files
                       </span>
                     </span>
-                    <span className="shrink-0 font-mono text-[10px] text-slate-600">
+                    <span className="shrink-0 text-[10px] text-fg-faint">
                       {new Date(b.importedAt).toLocaleDateString()}
                     </span>
                   </li>
@@ -197,18 +273,18 @@ function RankList({
           <div className="relative flex items-center justify-between gap-2 rounded px-2 py-1">
             {/* Count rendered as a bar so relative scale is readable at a glance. */}
             <div
-              className="absolute inset-y-0 left-0 rounded bg-accent/10"
+              className="absolute inset-y-0 left-0 rounded bg-brand/10"
               style={{ width: `${(row.count / max) * 100}%` }}
               aria-hidden
             />
-            <span className="relative truncate text-sm text-slate-300">{row.label}</span>
-            <span className="relative shrink-0 font-mono text-xs text-slate-400">{row.count}</span>
+            <span className="relative truncate text-sm text-fg-muted">{row.label}</span>
+            <span className="relative shrink-0 text-xs text-fg-muted">{row.count}</span>
           </div>
         );
         return (
           <li key={row.key}>
             {row.href ? (
-              <Link href={row.href} className="block hover:brightness-125">
+              <Link href={row.href} className="block hover:bg-surface-hover">
                 {inner}
               </Link>
             ) : (

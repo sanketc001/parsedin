@@ -20,25 +20,34 @@ function stripBom(text: string): string {
 }
 
 /**
- * Parse a CSV, locating the real header row by looking for one of the
- * expected column names. Rows above the header (LinkedIn's preamble) are
- * discarded.
+ * Rows as raw cell arrays, with no header interpretation.
+ *
+ * Needed because Ad_Targeting.csv repeats column names — "Job Titles" appears
+ * three times with different values — and folding rows into an object by
+ * column name would silently drop all but the last.
  */
-export function readTable(text: string, expected: string[]): Table {
+export function readMatrix(text: string): string[][] {
   const raw = stripBom(text);
-  if (!raw.trim()) return { headers: [], rows: [] };
-
-  let matrix: string[][];
+  if (!raw.trim()) return [];
   try {
-    matrix = parse(raw, {
+    return parse(raw, {
       relaxColumnCount: true,
       relaxQuotes: true,
       skipEmptyLines: true,
       bom: true,
     }) as string[][];
   } catch {
-    return { headers: [], rows: [] };
+    return [];
   }
+}
+
+/**
+ * Parse a CSV, locating the real header row by looking for one of the
+ * expected column names. Rows above the header (LinkedIn's preamble) are
+ * discarded.
+ */
+export function readTable(text: string, expected: string[]): Table {
+  const matrix = readMatrix(text);
   if (matrix.length === 0) return { headers: [], rows: [] };
 
   const wanted = new Set(expected.map(normalizeKey));

@@ -1,6 +1,7 @@
-import type { Company, Database, Person, School } from './types';
+import type { Company, Conversation, Database, Person, School } from './types';
 import { companyKey, monthsBetween, schoolKey, uniq } from './normalize';
 import { resolveByName } from './match';
+import { buildContactStats, type ContactStats } from './contact';
 
 // ---------------------------------------------------------------------------
 // Read-side projections over a Person. Filters, facets, the graph and the
@@ -136,6 +137,10 @@ export interface Indexes {
   bySchool: Map<string, Person[]>;
   noteCountByPerson: Map<string, number>;
   strengthByPerson: Map<string, number>;
+  /** Message/endorsement evidence per person. Absent = no recorded contact. */
+  contactByPerson: Map<string, ContactStats>;
+  /** Person id -> threads they appear in, newest first. */
+  conversationsByPerson: Map<string, Conversation[]>;
 }
 
 function push<K, V>(map: Map<K, V[]>, key: K, value: V) {
@@ -154,7 +159,16 @@ export function buildIndexes(db: Database): Indexes {
     bySchool: new Map(),
     noteCountByPerson: new Map(),
     strengthByPerson: new Map(),
+    contactByPerson: buildContactStats(db),
+    conversationsByPerson: new Map(),
   };
+
+  // Conversations arrive newest-first from the importer; preserve that order.
+  for (const conversation of db.activity.conversations) {
+    for (const personId of conversation.personIds) {
+      push(idx.conversationsByPerson, personId, conversation);
+    }
+  }
 
   for (const person of db.people) {
     for (const id of currentCompanyIds(person)) push(idx.currentByCompany, id, person);

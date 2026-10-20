@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { type Database, emptyDatabase, emptyResolution } from './types';
+import { type Database, emptyActivity, emptyDatabase, emptyResolution } from './types';
+import { canonicalUrl } from './normalize';
 
 // ---------------------------------------------------------------------------
 // Storage. A single JSON document on disk, read into memory and written back
@@ -51,7 +52,19 @@ function migrate(db: Database): Database {
     if (company.parentId === undefined) company.parentId = null;
     if (company.relationToParent === undefined) company.relationToParent = null;
   }
-  db.version = 2;
+  // v3 added the activity layer. Fill in any collection a v2 document lacks
+  // rather than replacing the whole object, so a partially-written one heals.
+  db.activity = { ...emptyActivity(), ...(db.activity ?? {}) };
+  // v4 added reply drafts.
+  if (!db.drafts) db.drafts = [];
+  // Some sources wrote profile URLs without a scheme ("www.linkedin.com/in/x"),
+  // which is a *relative* href and links to it 404 against this app. The
+  // importer now canonicalizes on the way in; heal documents written before it.
+  for (const person of [...db.people, ...(db.self ? [db.self] : [])]) {
+    const fixed = canonicalUrl(person.linkedinUrl);
+    if (fixed && fixed !== person.linkedinUrl) person.linkedinUrl = fixed;
+  }
+  db.version = 4;
   return db;
 }
 

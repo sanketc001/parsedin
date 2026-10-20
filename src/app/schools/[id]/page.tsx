@@ -55,7 +55,7 @@ export default function SchoolPage() {
         <PageHeader title="School not found" />
         <div className="p-6">
           <Empty>
-            No school with id <code className="font-mono">{id}</code>.{' '}
+            No school with id <code>{id}</code>.{' '}
             <Link href="/schools" className="link">
               Back to schools
             </Link>
@@ -113,10 +113,10 @@ export default function SchoolPage() {
                     <li key={r.cid}>
                       <Link
                         href={`/companies/${encodeURIComponent(r.cid)}`}
-                        className="chip hover:border-accent/50"
+                        className="chip hover:border-brand/50"
                       >
                         {r.company!.name}
-                        <span className="font-mono text-[10px] text-slate-500">{r.count}</span>
+                        <span className="text-[10px] text-fg-subtle">{r.count}</span>
                       </Link>
                     </li>
                   ))}
@@ -131,8 +131,8 @@ export default function SchoolPage() {
                 <ul className="space-y-1 text-sm">
                   {degrees.map(([label, count]) => (
                     <li key={label} className="flex justify-between gap-2">
-                      <span className="truncate text-slate-300">{label}</span>
-                      <span className="font-mono text-xs text-slate-500">{count}</span>
+                      <span className="truncate text-fg-muted">{label}</span>
+                      <span className="text-xs text-fg-subtle">{count}</span>
                     </li>
                   ))}
                 </ul>

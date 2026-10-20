@@ -12,18 +12,22 @@ import type { GraphModel, GraphNode, NodeKind } from '@/lib/graph';
 // are heavier and drift to the centre, which is what makes clusters legible.
 // ---------------------------------------------------------------------------
 
+// Canvas cannot read Tailwind classes, so the palette is repeated here. These
+// are the `node` tokens from tailwind.config.ts, and the edge tints are the
+// same hues at the alpha each relationship deserves — "connected" is the
+// densest edge kind by far, so it is drawn faintest.
 const COLORS: Record<NodeKind, string> = {
-  self: '#e07ee0',
-  person: '#5b9dff',
-  company: '#f5a05b',
-  school: '#7ee0a8',
+  self: '#8c4bce',
+  person: '#0a66c2',
+  company: '#915907',
+  school: '#01754f',
 };
 
 const EDGE_COLORS: Record<string, string> = {
-  'works-at': 'rgba(245,160,91,0.35)',
-  'worked-at': 'rgba(245,160,91,0.13)',
-  'studied-at': 'rgba(126,224,168,0.28)',
-  connected: 'rgba(91,157,255,0.07)',
+  'works-at': 'rgba(145,89,7,0.40)',
+  'worked-at': 'rgba(145,89,7,0.16)',
+  'studied-at': 'rgba(1,117,79,0.32)',
+  connected: 'rgba(10,102,194,0.10)',
 };
 
 interface Sim {
@@ -202,8 +206,8 @@ export function GraphCanvas({ model, onSelect, selectedId, highlight }: Props) {
         if (!a || !b) continue;
         const faded = dim(a.id) && dim(b.id);
         ctx.strokeStyle = faded
-          ? 'rgba(120,130,150,0.04)'
-          : EDGE_COLORS[edge.kind] ?? 'rgba(150,150,150,0.15)';
+          ? 'rgba(0,0,0,0.05)'
+          : EDGE_COLORS[edge.kind] ?? 'rgba(0,0,0,0.15)';
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
         ctx.lineTo(b.x, b.y);
@@ -220,7 +224,8 @@ export function GraphCanvas({ model, onSelect, selectedId, highlight }: Props) {
         ctx.fillStyle = COLORS[n.node.kind];
         ctx.fill();
         if (selected || hovered) {
-          ctx.strokeStyle = '#ffffff';
+          // A white halo vanished on a white canvas; ink reads at any zoom.
+          ctx.strokeStyle = '#191919';
           ctx.lineWidth = 2 / view.scale;
           ctx.stroke();
         }
@@ -241,7 +246,7 @@ export function GraphCanvas({ model, onSelect, selectedId, highlight }: Props) {
           (view.scale > 1.7 && !dim(n.id));
         if (!show) continue;
         ctx.globalAlpha = dim(n.id) ? 0.25 : 1;
-        ctx.fillStyle = n.node.kind === 'person' ? '#cbd5e1' : COLORS[n.node.kind];
+        ctx.fillStyle = n.node.kind === 'person' ? '#4d4d4d' : COLORS[n.node.kind];
         ctx.fillText(n.node.label, n.x, n.y - n.radius - 2 / view.scale);
         ctx.globalAlpha = 1;
       }
@@ -353,16 +358,16 @@ export function GraphCanvas({ model, onSelect, selectedId, highlight }: Props) {
       />
 
       {hoverLabel ? (
-        <div className="pointer-events-none absolute bottom-2 left-2 rounded border border-ink-600 bg-ink-900/95 px-2 py-1 text-xs text-slate-200">
-          <span className="font-mono text-[10px] uppercase text-slate-500">
+        <div className="pointer-events-none absolute bottom-2 left-2 rounded border border-line-strong bg-surface/95 px-2 py-1 text-xs text-fg">
+          <span className="text-[10px] uppercase text-fg-subtle">
             {hoverLabel.kind}
           </span>{' '}
           {hoverLabel.label}
         </div>
       ) : null}
 
-      <div className="pointer-events-none absolute right-2 top-2 rounded border border-ink-700 bg-ink-900/90 px-2 py-1.5 text-[10px] text-slate-400">
-        <div className="mb-1 font-mono uppercase tracking-wider text-slate-500">legend</div>
+      <div className="pointer-events-none absolute right-2 top-2 rounded border border-line bg-surface/90 px-2 py-1.5 text-[10px] text-fg-muted">
+        <div className="mb-1 uppercase tracking-wider text-fg-subtle">legend</div>
         {(
           [
             ['self', 'you'],
@@ -379,7 +384,7 @@ export function GraphCanvas({ model, onSelect, selectedId, highlight }: Props) {
             {label}
           </div>
         ))}
-        <div className="mt-1.5 border-t border-ink-700 pt-1 text-slate-600">
+        <div className="mt-1.5 border-t border-line pt-1 text-fg-faint">
           drag to pan · scroll to zoom
         </div>
       </div>

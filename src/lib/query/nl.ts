@@ -2,7 +2,12 @@ import type { Database } from '../types';
 import { resolveCompanies, resolveSchools } from '../derive';
 import { wordPrefixMatch } from '../match';
 import { companyKey, normalizeKey } from '../normalize';
-import { emptyFilters, isEmptyFilters, type Filters } from './filters';
+import {
+  emptyFilters,
+  isEmptyFilters,
+  type ContactFilter,
+  type Filters,
+} from './filters';
 
 // ---------------------------------------------------------------------------
 // Question parsing.
@@ -208,6 +213,38 @@ export function parseQuestion(question: string, db: Database): ParsedQuery {
     filters.hasNotes = true;
     interpretation.push({ facet: 'Has notes', values: ['yes'] });
   }
+  // Contact constraints, likewise position-independent. Ordered most specific
+  // first: "never messaged" must win over the "messaged" it contains.
+  const CONTACT_PHRASES: [RegExp, ContactFilter, string][] = [
+    [
+      /\b(?:never|not)\s+(?:messaged|spoken|talked|written|met)\b|\bhaven'?t\s+(?:messaged|spoken|talked)\b/,
+      'never-messaged',
+      'never messaged',
+    ],
+    [
+      /\bowes?\s+(?:me\s+)?a\s+reply\b|\bwaiting\s+(?:on|for)\s+(?:my|a)\s+reply\b|\bunanswered\b|\bneeds?\s+(?:a\s+)?repl(?:y|ies)\b/,
+      'awaiting-reply',
+      'awaiting my reply',
+    ],
+    [
+      /\b(?:two[-\s]way|both\s+(?:ways|directions)|replied|conversed)\b|\bactually\s+(?:know|talk)/,
+      'two-way',
+      'two-way conversation',
+    ],
+    [
+      /\b(?:i\s+(?:have\s+)?)?(?:messaged|spoken|talked|written)\s+(?:to|with)?\b|\bin\s+touch\b/,
+      'messaged',
+      'messaged',
+    ],
+  ];
+  for (const [re, value, label] of CONTACT_PHRASES) {
+    if (re.test(text)) {
+      filters.contact = value;
+      interpretation.push({ facet: 'Contact', values: [label] });
+      break;
+    }
+  }
+
   const degreeMatch = text.match(/\b(?:(1st|first|2nd|second|3rd|third)[-\s]?degree)\b/);
   if (degreeMatch) {
     const d = /1st|first/.test(degreeMatch[1]) ? 1 : /2nd|second/.test(degreeMatch[1]) ? 2 : 3;

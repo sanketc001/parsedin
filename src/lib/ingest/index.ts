@@ -9,6 +9,7 @@ import { loadDb, saveDb } from '../db';
 import { newId } from '../normalize';
 import { refreshDerived, type Ctx } from './merge';
 import { findHandler, foldName } from './linkedin';
+import { relinkActivity } from './activity';
 import { extractProfiles, importProfiles } from './enriched';
 
 // ---------------------------------------------------------------------------
@@ -138,6 +139,9 @@ export function runImport(
   // Settle derived fields and history ordering once, at the end.
   for (const person of db.people) refreshDerived(person);
   if (db.self) refreshDerived(db.self);
+  // Activity rows link to companies and people that a later file may have
+  // introduced, so resolve those references after every file has been read.
+  relinkActivity(db);
 
   stats.companies = db.companies.length;
   stats.schools = db.schools.length;
@@ -166,12 +170,21 @@ export function runImport(
   return { batch };
 }
 
-/** Sort key controlling handler order within a batch. */
+/**
+ * Sort key controlling handler order within a batch.
+ *
+ * The chain that matters: Profile.csv names the account owner, Invitations.csv
+ * is where the owner's own profile URL is recovered (Profile.csv omits it), and
+ * messages.csv needs that URL to tell an outbound message from an inbound one.
+ * Connections.csv runs before all of them so activity links to real people.
+ */
 function rank(name: string): number {
   const folded = foldName(name);
   if (folded === 'profile.csv') return 0;
   if (folded === 'emailaddresses.csv') return 1;
   if (folded === 'connections.csv') return 2;
+  if (folded === 'invitations.csv') return 3;
+  if (folded === 'messages.csv') return 4;
   if (/\.json$/.test(folded)) return 9;
   return 5;
 }
